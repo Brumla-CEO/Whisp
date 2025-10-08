@@ -43,6 +43,3 @@ Dokumentace je rozdělena do logických částí podle SDLC a pokrývá celý v�
 - [Závěrečné shrnutí](conclusion.md)
 
 ---
-
-**Poznámka:** Všechny odkazy jsou relativní vůči této složce `docs/`.  
-Tento soubor slouží k rychlé orientaci v dokumentaci projektu.
