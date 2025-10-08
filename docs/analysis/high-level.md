@@ -1,136 +1,144 @@
-# High-level analýza — Live Chat 
+# 🧠 High-level analýza — Live Chat
 
-Tento dokument navazuje na [Úvod](../intro/introduction.md) a soustředí se na technický pohled na aplikaci.  
-Cílem je shrnout klíčové požadavky, hlavní funkcionality, architekturu a návrh systému.  
-
----
-
-## Hlavní funkcionality
-Základními povinnými funkcemi aplikace budou:  
-
-- **Registrace a přihlášení uživatelů** – pomocí bcryptu pro hashování hesel a JWT tokenů pro autentizaci.  
-- **Uživatelské profily** – možnost upravit profilovou fotografii a krátké bio.  
-- **Soukromé i skupinové chaty** – komunikace mezi dvěma uživateli i v rámci vícečlenných místností.  
-- **Realtime komunikace** – implementovaná přes WebSocket server v PHP (Ratchet).  
-- **Ukládání historie zpráv** – ve vybrané databázi (PostgreSQL/MySQL) provozované v Dockeru.  
-- **Administrátorské rozhraní** – umožňující správu uživatelů, activity log a blokování účtů.  
-
-Nad rámec těchto funkcí lze jako možné rozšíření uvažovat o podpoře emoji, push notifikacích nebo tmavém režimu UI.  
+Tento dokument navazuje na [Úvod](../intro/introduction.md) a představuje **vysokoúrovňový návrh (high-level analysis)** projektu *Whisp – Live Chat Application*.  
+Cílem je popsat hlavní funkcionality, architektonický přístup, bezpečnostní zásady, způsob testování a plán vývoje v rámci metodiky **SDLC** a přístupu **Agile / Scrum**.
 
 ---
 
-## Architektura a technologický stack
-Architektura aplikace je navržena jako **vrstvený systém** s jasným oddělením zodpovědností:  
+## 🎯 Cíl projektu a hlavní funkcionality
 
-- **Frontend (React + TailwindCSS)** – zajišťuje uživatelské rozhraní, komunikaci s API a WebSocket serverem.  
-- **Backend (OOP PHP)** – implementuje aplikační logiku, REST API a autentizaci. Kód je organizován do vrstev:  
-  - `global` - veřejný root 
-  - `config` - pripojení k databázi,klíče pro JWT 
-  - `controllers` – zpracování HTTP požadavků a WebSocket eventů,  
-  - `services` – aplikační logika,  
-  - `repositories` – databázový přístup (PDO),  
-  - `modules` – datové entity (User, Room, Message, ActivityLog),  
-  - `middleware` – autentizace, validace vstupů.  
-  - `websocket` - websocket server 
-- **WebSocket server (Ratchet v PHP)** – zajišťuje realtime komunikaci.  
-- **Databáze (PostgreSQL/MySQL)** – běží v Docker kontejneru, ukládá uživatele, zprávy, místnosti a activity log.  
+Cílem projektu je navrhnout a realizovat moderní webovou aplikaci umožňující **komunikaci v reálném čase** s důrazem na bezpečnost, škálovatelnost a udržovatelnost.  
+Uživatelé mohou:
 
-Komunikace probíhá kombinací REST API (autentizace, CRUD operace) a WebSocketů (zprávy, notifikace, status online).  
+- registrovat a spravovat své účty,  
+- vytvářet a spravovat chatovací místnosti,  
+- komunikovat v reálném čase (soukromě i skupinově),  
+- upravovat profil a sledovat historii konverzací,  
+- využívat administrátorské rozhraní pro správu uživatelů a aktivit.
+
+Aplikace má být připravena pro týmovou spolupráci, následné rozšiřování a případnou integraci dalších funkcí (notifikace, reakce, tmavý/světlý režim).
 
 ---
 
-## Autentizace a autorizace
-Bezpečnost aplikace je založena na:  
-- **bcrypt hashování hesel**,  
-- **JWT tokenu s platností 1 hodiny**, který je uložený v **HttpOnly cookies** (ochrana proti XSS),  
-- **roli uživatele a administrátora**, kontrolované přes middleware.  
+## ⚙️ Architektura a technologický rámec
 
-Admin má rozšířená oprávnění pro správu systému, avšak **nemá přístup k obsahu soukromých zpráv** – vidí pouze metadata konverzací (účastníky, čas, místnosti).  
+Architektura projektu je navržena jako **vícevrstvá webová aplikace** složená ze tří hlavních částí:
 
----
-## WebSocket řešení
-Realtime komunikace je implementována pomocí knihovny **Ratchet** (PHP). WebSocket server běží jako samostatný proces v Dockeru a stará se o:  
-- předávání zpráv mezi uživateli a místnostmi,  
-- indikaci online/offline stavu,  
-- rozesílání notifikací.  
+### Frontend
+- Realizovaný jako **Single Page Application (SPA)**.  
+- Zajišťuje interakci s uživatelem a komunikaci s backendem.  
+- Systém používá vlastní routing a umožňuje responzivní zobrazení.  
+- Data jsou načítána přes REST API a aktualizována v reálném čase pomocí WebSocketů.
 
-Při připojení k WebSocketu je vždy ověřován platný JWT token.  
+### Backend
+- Postaven na **objektově orientovaném PHP** s důrazem na čitelnost a rozšiřitelnost.  
+- Zajišťuje aplikační logiku, správu dat, autentizaci, autorizaci a API komunikaci.  
+- Odděluje jednotlivé odpovědnosti (kontrolery, služby, úložiště, middleware).  
 
----
+### Databázová a komunikační vrstva
+- **Databáze**: transakční relační systém (PostgreSQL).  
+- **WebSocket server**: zajišťuje přenos zpráv a notifikací v reálném čase.  
+- Komunikace probíhá přes **HTTP protokol (REST API)** a **WebSockety**.  
 
-## Databázový návrh
-Databáze obsahuje klíčové entity:  
-
-
-- **users** – informace o uživatelích (jméno, email, profil), ukládá se i heslo (bcrypt hash), role a status účtu (aktivní/blokovaný).  
-- **roles** – seznam rolí (např. uživatel, administrátor, moderátor).  
-- **rooms** – definice chatovacích místností (název, typ, vlastník).  
-- **room_memberships** – vazba uživatelů na místnosti (kdo je členem jaké místnosti).  
-- **messages** – zprávy posílané uživateli, s odkazem na místnost a časem vytvoření, případně editace nebo smazání.  
-- **activity_logs** – loguje uživatelské akce (login, logout, změna profilu, vytváření místností apod.).  
-- **notifications** – upozornění pro uživatele (např. nová zpráva, zmínka, systémové notifikace), stav přečtení.  
-- **sessions** – sledování aktivních relací uživatelů (JWT token, začátek a konec session, stav). 
-
-Soukromý chat je řešen jako místnost se dvěma uživateli.  
+Tento návrh podporuje rozšiřování (např. přidání dalších služeb nebo modulů) a refaktoring bez narušení základní struktury.
 
 ---
 
-## Bezpečnostní opatření
-Projekt počítá s několika bezpečnostními kroky:  
+## 🔐 Autentizace a autorizace
 
-- HTTPS komunikace (TLS certifikát při nasazení).  
-- Hashování hesel pomocí bcrypt.  
-- Ukládání JWT tokenů v HttpOnly cookies se Secure a SameSite nastavením.  
-- Input validace na backendu (ochrana proti SQLi, XSS).  
-- Prepared statements v repositories.  
-- Middleware kontrola oprávnění (role).  
-- Omezení přístupu administrátora jen na metadata soukromých zpráv.  
-- Doporučený rate limiting jako ochrana proti brute-force útokům.  
+Aplikace využívá princip **Role-Based Access Control (RBAC)**, který definuje minimálně dvě role:
 
----
+- **Uživatel** – základní oprávnění pro komunikaci a správu vlastního profilu,  
+- **Administrátor** – rozšířená práva pro správu uživatelů, aktivit a systémových dat.
 
-## Testování
-Testování bude probíhat ve dvou rovinách:  
-1. **Manuální testy** – ověřující uživatelské scénáře (registrace, login, chat, admin funkce).  
-2. **Unit testy** – zaměřené na logiku služeb (services), např. generování a ověřování JWT, validaci vstupů nebo logiku blokování uživatele.  
+Proces autentizace zajišťuje bezpečné ověření identity uživatele.  
+Hesla jsou ukládána v bezpečném formátu, který znemožňuje jejich přímé zpětné získání.  
+Autorizace probíhá na úrovni aplikační logiky a kontroluje přístup k jednotlivým funkcím.
 
-Výsledky testů budou dokumentovány.  
+Aplikace klade důraz na prevenci typických útoků (SQL Injection, XSS, CSRF) a správné nakládání s uživatelskými údaji.
 
 ---
 
-## Nasazení a provoz
-Aplikace bude provozována pomocí **Dockeru**:  
-- kontejnery pro backend, frontend, WebSocket server a databázi,  
-- volitelně reverzní proxy (nginx) pro HTTPS a routing.  
+## 🧩 Databázový přehled
 
-Lokální vývoj proběhne přes `docker-compose`. Produkční nasazení bude možné na VPS či cloud serveru s HTTPS certifikátem (Let's Encrypt).  
+Systém bude využívat **relační SQL databázi s podporou transakcí**.  
+Na této úrovni je potřeba zajistit konzistenci dat, referenční integritu a možnost efektivního vyhledávání.
 
-Logování bude realizováno do souborů a databáze, včetně základní rotace logů.  
+Detailní návrh databázového modelu (ER diagram) bude součástí další fáze 
 
 ---
 
-## Plán vývoje (SDLC)
-Vývoj proběhne v následujících fázích:  
+## 🔒 Bezpečnostní principy
 
-1. **Analýza požadavků** – definice use-case scénářů a uživatelských očekávání.  
-2. **Návrh** – ER diagram databáze, architektonický diagram, API specifikace.  
-3. **Implementace** – backend (PHP API a WebSocket), frontend (React UI).  
-4. **Testování** – unit testy, manuální funkční testy, bezpečnostní kontrola.  
-5. **Nasazení** – Docker, nginx, HTTPS.  
-6. **Údržba a rozšíření** – implementace volitelných funkcí.  
+Projekt počítá s implementací následujících opatření:
 
-Každá fáze bude probíhat v iteracích (Scrum sprinty).  
+- Šifrovaná komunikace pomocí **TLS** v produkčním prostředí,  
+- Bezpečné uchovávání uživatelských hesel,  
+- Validace vstupů a ochrana proti typickým útokům,  
+- Kontrola přístupových práv podle role uživatele,  
+- Ochrana citlivých dat a auditní záznamy uživatelských aktivit.
+
+Bezpečnostní opatření budou průběžně revidována v rámci testování a nasazení.
 
 ---
 
-## Výstupy práce
-Výsledkem projektu budou:  
-- funkční aplikace (frontend + backend + databáze),  
-- dokumentace pokrývající všechny fáze SDLC,  
+## 🧪 Testování a zajištění kvality
+
+Testování bude probíhat v několika úrovních:
+
+- **Manuální testy** – simulace reálného chování uživatele (registrace, login, odeslání zprávy, blokace účtu).  
+- **Unit testy** – testování funkční logiky jednotlivých komponent.  
+- **Continuous Integration (CI)** – automatizované spuštění testů při každé změně v repozitáři.  
+
+Součástí procesu bude také **Quality Assurance (QA)** a případně **statická analýza kódu**.  
+Cílem je zajistit stabilitu projektu a zabránit přijetí neúspěšných buildů do hlavní větve.
+
+---
+
+## 🚀 Nasazení a provoz
+
+Pro vývoj a demonstrační účely bude aplikace provozována pomocí **Dockeru**.  
+Backend, frontend a databáze poběží jako samostatné služby spravované přes `docker-compose`.  
+
+Tento přístup umožní:
+- snadné spuštění projektu v jakémkoli prostředí,  
+- oddělení vývojového a produkčního prostředí,  
+- přípravu na pozdější integraci s CI/CD procesy.  
+
+---
+
+## 🔄 SDLC cyklus a iterativní vývoj
+
+Projekt se vyvíjí podle metodiky **SDLC (Software Development Life Cycle)**,  
+která zahrnuje fáze:
+
+1. **Analýza** – identifikace požadavků a cílů,  
+2. **Návrh** – příprava architektury a modelů,  
+3. **Implementace** – vývoj backendu, frontendu a websocket komunikace,  
+4. **Testování** – validace funkčnosti a bezpečnosti,  
+5. **Nasazení** – demonstrační provoz v Dockeru,  
+6. **Údržba a rozšiřování** – iterativní přidávání nových funkcí.
+
+Tyto fáze probíhají **opakovaně v krátkých iteracích (Scrum sprintech)**, což umožňuje plynulý vývoj a flexibilní reakci na nové požadavky.
+
+---
+
+## 📦 Výstupy projektu
+
+- funkční webová aplikace (frontend + backend + databáze),  
+- kompletní dokumentace všech fází SDLC,  
 - testovací scénáře a výsledky,  
-- prezentace k obhajobě projektu.  
+- **Developers Guide** popisující proces:
+  - spuštění projektu,  
+  - build,  
+  - vývoj a nasazení,  
+  - přidávání funkcí a práci s Gitem,  
+- prezentace pro obhajobu projektu.  
 
 ---
 
-## Shrnutí
-Projekt Live Chat představuje moderní webovou aplikaci kombinující **React**, **TailwindCSS**, **PHP (OOP)**, **WebSockety (Ratchet)** a **Docker**. Klade důraz na bezpečnost, oddělení rolí, udržovatelnost a dokumentaci. Aplikace je připravena na **týmový vývoj**, využívá standardní workflow (Git, PR, code review) a reflektuje principy používané v profesionálních IT firmách.  
+## 🧭 Shrnutí
+
+Projekt **Whisp – Live Chat Application** je koncipován jako moderní, bezpečná a rozšiřitelná aplikace.  
+Přináší reálný pohled na proces vývoje softwaru v prostředí týmové spolupráce,  
+využívá standardní metodiky (SDLC + Agile Scrum) a nástroje běžné v praxi (Git, CI, Code Review).
