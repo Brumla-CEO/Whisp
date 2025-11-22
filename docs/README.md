@@ -14,6 +14,7 @@ Dokumentace je rozdělena do logických částí podle SDLC a pokrývá celý v�
 - [Metodika vývoje (SDLC + Scrum)](intro/methodology.md)
 - [Zadání práce](assignment.md)
 - [Postup a log sprintů](progress.md)
+- [Backlog](backlog.md)
 
 ### Analýza
 - [Požadavky](analysis/requirements.md)
