@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # 1. SLUŽBA POSTGRESQL (Databáze)
+  db:
+    image: postgres:16-alpine
+    container_name: whisp-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: whisp_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-Whisp} 
+      POSTGRES_DB: WhispDB 
+    ports:
+      - "5432:5432" 
+    volumes:
+      # Zajišťuje trvalosti dat DB i po restartu
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # 2. SLUŽBA BACKEND (PHP)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    container_name: php-backend
+    ports:
+      - "8000:8000"
+    #  Backend spustí až po databázi
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  # 3. SLUŽBA FRONTEND (React/Vite.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: vite-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      # Propojí s Backendem pomocí jména Docker služby
+      - VITE_BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  # Zajišťuje, že se data DB neztratí, když se kontejner zastaví/smaže.
+  db_data:
