@@ -1,0 +1,17 @@
+# -----------------------------------------------------------------
+# 1. Kritické Konfigurace a Hesla 
+# -----------------------------------------------------------------
+# Soubor s lokálními proměnnými prostředí (DB hesla, tajné klíče JWT)
+.env
+# Databáze Docker volumes (trvalé úložiště dat DB)
+db_data/
+# -----------------------------------------------------------------
+# 2. Ignorování IDE a OS Souborů 
+# -----------------------------------------------------------------
+# Ignorování IDE konfigurace (WebStorm .idea)
+.idea/
+# -----------------------------------------------------------------
+# 3. Opakované Ignorování Závislostí (Redundantní, ale bezpečné)
+# -----------------------------------------------------------------
+**/node_modules
+**/vendor/

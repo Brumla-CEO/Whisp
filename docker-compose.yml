@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # --- BACKEND (PHP) ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: whisp_backend
+    volumes:
+      - ./backend:/var/www/html
+    # TOTO JE NOVÉ: Spustíme vestavěný PHP server na portu 8000
+    command: php -S 0.0.0.0:8000 -t /var/www/html/public /var/www/html/public/index.php
+    # TOTO JE NOVÉ: Otevřeme port 8000 ven, aby se na něj React dostal
+    ports:
+      - "8000:8000"
+    environment:
+      # Připojení k DB kontejneru
+      DATABASE_URL: "pgsql://whisp_user:whisp_password@db:5432/whisp_db"
+    depends_on:
+      - db
+    networks:
+      - whisp_net
+
+  # --- FRONTEND (React/Vite) ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: whisp_frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Důležité: izoluje node_modules v kontejneru
+    ports:
+      - "5173:5173"
+    environment:
+      - CHOKIDAR_USEPOLLING=true # Nutné pro Windows Docker file watching
+    networks:
+      - whisp_net
+
+  # --- DATABÁZE (PostgreSQL) ---
+  db:
+    image: postgres:16-alpine
+    container_name: whisp_db
+    environment:
+      POSTGRES_USER: whisp_user
+      POSTGRES_PASSWORD: whisp_password
+      POSTGRES_DB: whisp_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    networks:
+      - whisp_net
+
+volumes:
+  postgres_data:
+
+networks:
+  whisp_net:
+    driver: bridge
