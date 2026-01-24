@@ -59,7 +59,41 @@ class Router {
                     }
                 }
                 break;
-            // -----------------------------
+
+                        case '/api/friends/search':
+                            if ($method === 'GET') (new \App\Controllers\FriendController())->search();
+                            break;
+                        case '/api/friends/add':
+                            if ($method === 'POST') (new \App\Controllers\FriendController())->add();
+                            break;
+                        case '/api/friends': // To načte seznam přátel pro sidebar
+                            if ($method === 'GET') (new \App\Controllers\FriendController())->index();
+                            break;
+                        case '/api/friends/requests': // To načte čekající žádosti
+                            if ($method === 'GET') (new \App\Controllers\FriendController())->requests();
+                            break;
+                        case '/api/friends/accept':
+                            if ($method === 'POST') (new \App\Controllers\FriendController())->accept();
+                            break;
+                        case '/api/chat/open':
+                                        if ($method === 'POST') (new \App\Controllers\ChatController())->openDm();
+                                        break;
+                                    case '/api/messages/send':
+                                        if ($method === 'POST') (new \App\Controllers\ChatController())->sendMessage();
+                                        break;
+                                    case '/api/messages/history':
+                                        if ($method === 'GET') (new \App\Controllers\ChatController())->getHistory();
+                                        break;
+                                    case '/api/messages/delete':
+                                                    if ($method === 'DELETE' || $method === 'POST') { // Někdy je snazší poslat POST s action delete
+                                                         (new \App\Controllers\ChatController())->deleteMessage();
+                                                    }
+                                                    break;
+                                                case '/api/messages/update':
+                                                    if ($method === 'PUT' || $method === 'POST') {
+                                                         (new \App\Controllers\ChatController())->updateMessage();
+                                                    }
+                                                    break;
 
             case '/api/logout':
                 if ($method === 'POST') (new AuthController())->logout();

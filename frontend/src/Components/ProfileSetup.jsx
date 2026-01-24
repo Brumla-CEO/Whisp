@@ -19,9 +19,25 @@ const ProfileSetup = () => {
 
     // Inicializace stavu při načtení
     useEffect(() => {
-        if (user.avatar_url && !user.avatar_url.includes('dicebear')) {
-            setAvatarType('custom');
-            setCustomAvatarUrl(user.avatar_url);
+        if (user.avatar_url) {
+            if (user.avatar_url.includes('dicebear')) {
+                // Pokud je to Dicebear, musíme z URL vytáhnout ten "seed", aby se zobrazil ten správný
+                setAvatarType('random');
+                try {
+                    const urlObj = new URL(user.avatar_url);
+                    const seedParam = urlObj.searchParams.get("seed");
+                    if (seedParam) {
+                        setCurrentSeed(seedParam);
+                    }
+                } catch (e) {
+                    // Kdyby URL byla divná, necháme default podle jména
+                    console.error("Chyba při parsování avatara", e);
+                }
+            } else {
+                // Pokud je to vlastní obrázek (imgur atd.)
+                setAvatarType('custom');
+                setCustomAvatarUrl(user.avatar_url);
+            }
         }
     }, [user]);
 
