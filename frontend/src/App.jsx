@@ -7,12 +7,19 @@ import ProfileSetup from './components/ProfileSetup';
 import AdminPanel from './components/AdminPanel';
 import './App.css';
 
+// SVG Ikona ozubeného kolečka
+const SettingsIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.82 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+);
+
 function App() {
     const { user, logout } = useContext(AuthContext);
-    const [showSettings, setShowSettings] = useState(false); // Stav pro nastavení profilu
-    const [showAdmin, setShowAdmin] = useState(false);     // Stav pro admin rozhraní
-    const [isLogin, setIsLogin] = useState(true);           // Přepínač Login/Register
-
+    const [showSettings, setShowSettings] = useState(false);
+    const [showAdmin, setShowAdmin] = useState(false);
+    const [isLogin, setIsLogin] = useState(true);
 
     const toggleAdmin = () => {
         setShowAdmin(!showAdmin);
@@ -27,16 +34,13 @@ function App() {
     return (
         <div className="app-layout">
             {!user ? (
-                /* --- 1. AUTENTIKACE (Nepřihlášený uživatel) --- */
                 <div className="auth-wrapper">
                     <div className="auth-brand">
                         <h1 className="logo-text">Whisp</h1>
                         <p>Vítejte v bezpečné zóně</p>
                     </div>
-
                     <div className="auth-card">
                         {isLogin ? <Login /> : <Register />}
-
                         <div className="auth-toggle">
                             {isLogin ? (
                                 <p>Nemáte ještě účet? <span onClick={() => setIsLogin(false)}>Zaregistrujte se</span></p>
@@ -49,43 +53,46 @@ function App() {
             ) : (
                 <>
                     <header>
-                        <h1 style={{ color: 'var(--accent)', margin: 0 }}>Whisp</h1>
+                        {/* LEVÁ STRANA: Logo + User Tag */}
+                        <div className="header-left">
+                            <h1 className="app-logo">Whisp</h1>
+                            <span className="user-tag">@{user.username}</span>
+                        </div>
 
-                        <div className="user-nav" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                            {/* Admin tlačítko - nyní decentnější */}
+                        {/* PRAVÁ STRANA: Ovládací prvky */}
+                        <div className="header-right">
                             {user.role === 'admin' && (
                                 <button
                                     onClick={toggleAdmin}
                                     className={`admin-toggle-btn ${showAdmin ? 'active' : ''}`}
                                 >
-                                    {showAdmin ? "Zavřít Admin" : "🛡️ Admin Nástroje"}
+                                    {showAdmin ? "Zavřít" : "🛡️ Admin"}
                                 </button>
                             )}
 
-                            <span
+                            <button
                                 onClick={toggleSettings}
-                                style={{cursor: 'pointer', textDecoration: 'underline', fontSize: '0.9rem'}}
+                                className={`icon-btn settings-btn ${showSettings ? 'active' : ''}`}
+                                title="Nastavení profilu"
                             >
-            {user.username} (Nastavení)
-        </span>
+                                <SettingsIcon />
+                            </button>
+
                             <button onClick={logout} className="logout-btn">Odhlásit</button>
                         </div>
                     </header>
 
                     <main className="main-content">
-
                         <aside className="sidebar">
                             <UserList />
                         </aside>
                         <section className="chat-window">
                             {showAdmin ? (
-
                                 <AdminPanel />
                             ) : showSettings ? (
-
                                 <div className="settings-view">
-                                    <button onClick={() => setShowSettings(false)} className="close-btn">
-                                        ← Zpět do chatu
+                                    <button onClick={() => setShowSettings(false)} className="close-btn-text">
+                                        &larr; Zpět do chatu
                                     </button>
                                     <ProfileSetup />
                                 </div>

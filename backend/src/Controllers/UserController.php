@@ -44,14 +44,26 @@ public function update($id) {
     // 1. Ověření identity
     $currentUser = AuthMiddleware::check();
 
-    // 2. Kontrola oprávnění (Ownership check)
-    if ($currentUser->sub !== $id) {
+    // 2. Kontrola oprávnění
+    if ($currentUser->sub != $id) { // Pozor: v PHP je bezpečnější != nebo porovnání stringů, $currentUser->sub může být int/string
         http_response_code(403);
         echo json_encode(["message" => "Nemáte oprávnění upravovat cizí profil"]);
         return;
     }
 
     $data = json_decode(file_get_contents("php://input"));
+
+    // Získání aktuálních dat uživatele pro porovnání
+    $existingUser = $this->user->findById($id);
+
+    // 3. Kontrola unikátnosti jména (pokud se mění)
+    if (isset($data->username) && $data->username !== $existingUser['username']) {
+        if ($this->user->findByUsername($data->username)) {
+            http_response_code(409);
+            echo json_encode(["message" => "Toto uživatelské jméno je již obsazené"]);
+            return;
+        }
+    }
 
     if ($this->user->update($id, $data)) {
         echo json_encode(["message" => "Profil byl úspěšně aktualizován"]);
