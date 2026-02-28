@@ -1,54 +1,38 @@
-# 💬 Whisp – Live Chat Application
+# Whisp – realtime chat (React + PHP + PostgreSQL + WebSockets)
 
-Tento repozitář obsahuje moji maturitní práci: **Webová aplikace pro reálnou komunikaci (Live Chat)**.  
-Projekt je vyvíjen podle metodiky **SDLC (Software Development Life Cycle)** a využívá přístupu **Agile Scrum** pro řízení vývoje.
+Whisp je chatovací aplikace se správou uživatelů, přátel, DM i skupinových místností a realtime notifikacemi přes WebSocket (Ratchet).
 
----
+- **Frontend:** React (Vite)
+- **Backend API:** PHP 8 (vlastní router, PDO)
+- **Realtime:** Ratchet WebSocket server
+- **DB:** PostgreSQL (init skript v `backend/init.sql`)
+- **Docker:** `docker-compose.yml` (DB + API + WS + FE)
 
-## 🎯 Cíl projektu
+## Rychlý start (Docker)
 
-Cílem je vytvořit plnohodnotnou webovou aplikaci, která umožní:
+```bash
+docker compose up --build
+```
 
-- **soukromé i skupinové chatování v reálném čase**,  
-- **správu uživatelských účtů a profilů**,  
-- **autentizaci uživatelů pomocí JWT tokenů a bezpečné hashování hesel přes bcrypt**,  
-- **přehledné logování aktivit a správu uživatelů v administračním rozhraní**,  
-- **moderní uživatelské rozhraní** postavené na přístupu *Single Page Application (SPA)*.
+### Porty
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:8000`
+- WebSocket: `ws://localhost:8080`
+- PostgreSQL: `localhost:5432` (uživatel `whisp_user`, DB `whisp_db`)
 
----
+## Dokumentace
+Rozcestník: [`docs/README.md`](docs/README.md)
 
-## ⚙️ Přínos projektu
+## Struktura repozitáře (high-level)
+- `frontend/` – React klient
+- `backend/` – PHP API + Ratchet WS server + init DB
+- `docs/` – projektová dokumentace (hybrid: maturita + engineering)
+- `docker-compose.yml` – lokální prostředí
 
-Důraz je kladen především na:
+## Bezpečnostní poznámka
+Projekt aktuálně používá:
+- JWT podpis klíčem uloženým přímo ve zdrojáku (`backend/src/Services/JWTService.php`)
+- token posílá do WS serveru přes query string (`ws://.../?token=...`)
 
-- **proces vývoje podle metodiky SDLC**,  
-- **praktické využití verzovacího systému Git**,  
-- **řízení vývoje pomocí Agile Scrum (iterativní přístup ve sprintech)**,  
-- **použití moderních vývojových nástrojů a principů týmové spolupráce**,  
-- **ukázku best practices pro udržitelný a čitelný kód**.
+Viz **`docs/issue.md`** pro bezpečnostní a architektonický audit a návrhy oprav.
 
-Projekt je navržen tak, aby byl **připravený na týmový vývoj** – zahrnuje jasnou strukturu kódu, procesy pro pull requesty, dokumentaci a verzování.
-
----
-
-## 🧩 Architektura projektu
-
----
-
-## 🌿 Branching strategie
-
-Pro řízení verzí používá projekt přehlednou **branching strategii** postavenou na feature větvích:
-
-- `main` – obsahuje **aktuální a stabilní verzi** projektu (frontend, backend i dokumentaci).  
-- Každá nová změna se provádí v **krátkodobé feature větvi**, která se po schválení merguje zpět do `main`.  
-- Všechny úpravy procházejí **Pull Requestem (PR)**, který umožňuje kontrolu a schválení změn.
-
-📄 Více informací: [Branching Strategy](docs/process/branching-strategy.md)
-
----
-
-## 📘 Dokumentace
-
-Veškerá dokumentace je verzována společně s kódem v adresáři [`/docs`](./docs) a je rozdělena do samostatných částí
-
-Veškerá dokumentace je verzována společně s kódem v adresáři [`/docs`](./docs) a je rozdělena do samostatných částí:

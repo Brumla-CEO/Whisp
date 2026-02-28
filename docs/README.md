@@ -1,46 +1,26 @@
-# Dokumentace projektu Whisp
+# Dokumentace Whisp
 
-Tento soubor slouží jako hlavní rozcestník dokumentace k projektu **Whisp – Live Chat aplikace**.  
-Dokumentace je rozdělena do logických částí podle SDLC a pokrývá celý vývojový proces od analýzy po nasazení.
+Tahle složka obsahuje kompletní dokumentaci projektu **Whisp** ve stylu **hybrid**:
 
----
+- část vhodná pro školní obhajobu (analýza, požadavky, metodika, backlog, progres),
+- část vhodná pro reálný vývoj (architektura, API, DB, realtime, security, dev/deploy guide).
 
-## Obsah dokumentace
+## Obsah
+1. [Project overview](01_project_overview.md)
+2. [Požadavky](02_requirements.md)
+3. [Architektura](03_architecture.md)
+4. [Backend design](04_backend_design.md)
+5. [Frontend design](05_frontend_design.md)
+6. [Databázový návrh](06_database_design.md)
+7. [API specifikace](07_api_specification.md)
+8. [Realtime architektura](08_realtime_architecture.md)
+9. [Bezpečnostní model](09_security_model.md)
+10. [Metodika](10_methodology.md)
+11. [Backlog](11_backlog.md)
+12. [Sprint progress](12_sprint_progress.md)
+13. [Dev guide](13_dev_guide.md)
+14. [User guide](14_user_guide.md)
+15. [Deployment](15_deployment.md)
+16. [Audit problémů](issue.md)
 
-### Úvod a analýza
-- [Úvod a motivace](intro/introduction.md)
-- [SWOT analýza](intro/swot.md)
-- [Minimum Viable Product (MVP)](intro/mvp.md)
-- [Metodika vývoje (SDLC + Scrum)](intro/methodology.md)
-- [Zadání práce](assignment.md)
-- [Postup a log sprintů](progress.md)
-- [Backlog](backlog.md)
-
-### Analýza
-- [Požadavky](analysis/requirements.md)
-- [Use-case scénáře](analysis/usecases.md)
-- [Diagramy (ERD, architektura)](analysis/diagrams.md)
-
-### Návrh systému (Design)
-- [Architektura systému](design/architecture.md)
-- [API endpoints](design/api.md)
-- [Databázový model](design/db.md)
-
-### Implementace
-- [Backend](implementation/backend.md)
-- [Frontend](implementation/frontend.md)
-- [Propojení API a WebSocketů](implementation/integration.md)
-
-### Testování
-- [Testovací strategie](testing/strategy.md)
-- [Výsledky testování](testing/results.md)
-- [Použité nástroje](testing/tools.md)
-
-### Nasazení (Deployment)
-- [Spuštění lokálně (Docker)](deployment/setup.md)
-- [Možnosti hostingu](deployment/hosting.md)
-
-### Závěr
-- [Závěrečné shrnutí](conclusion.md)
-
----
+> Pozn.: `issue.md` je záměrně detailní. Slouží jako backlog technického dluhu a bezpečnostního hardeningu.
