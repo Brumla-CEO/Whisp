@@ -15,7 +15,6 @@ class AuthMiddleware {
 
             if ($decoded) {
                 $db = (new Database())->getConnection();
-                // Kontrola existence a aktivity session
                 $stmt = $db->prepare("SELECT id FROM sessions WHERE token = ? AND is_active = TRUE LIMIT 1");
                 $stmt->execute([$token]);
 

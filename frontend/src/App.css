@@ -109,15 +109,18 @@ header {
     font-family: monospace;
 }
 
-/* Tlačítka v hlavičce */
 .icon-btn {
-    background: transparent; border: none; color: var(--text-dim);
-    width: 40px; height: 40px; border-radius: 50%;
-    display: flex; justify-content: center; align-items: center; padding: 0;
-    box-shadow: none;
+    position: relative;background: transparent;border: none;color: var(--text-dim);width: 40px;height: 40px;min-width: 40px;flex-shrink: 0;
+    border-radius: 50%;display: flex;justify-content: center;align-items: center;padding: 0;box-shadow: none;overflow: visible;cursor: pointer;
 }
-.icon-btn:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-main); }
-.icon-btn.active { color: var(--accent); background: rgba(187, 134, 252, 0.1); }
+
+.icon-btn:hover {
+    background: rgba(255, 255, 255, 0.1); color: var(--text-main);
+}
+
+.icon-btn.active {
+    color: var(--accent);background: rgba(187, 134, 252, 0.1);
+}
 
 .logout-btn {
     width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;
@@ -312,38 +315,67 @@ header {
     padding: 0 5px;
 }
 
-/* Rozbalovací menu */
+/* Rozbalovací menu akcí - OPRAVA POZICE */
 .action-menu {
     position: absolute;
-    bottom: 100%; /* Nad tlačítkem */
-    right: 0; /* Zarovnáno doprava (u my-message) */
-    background: #333;
+    bottom: 100%; /* Otevře se nad tlačítkem */
+    background: #252525;
     border: 1px solid #444;
-    border-radius: 5px;
-    padding: 5px 0;
-    min-width: 100px;
-    z-index: 100;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    border-radius: 8px;
+    padding: 6px;
+    min-width: 130px; /* Trochu širší, aby se text vešel */
+    z-index: 1000; /* Vysoký index, aby bylo nahoře */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
+/* --- SPECIFICKÉ POZICE --- */
+
+/* 1. U MÝCH zpráv (jsou vpravo) -> Menu zarovnáme DOPRAVA (aby se otevřelo do leva) */
+.my-message .action-menu {
+    right: 0;
+    left: auto;
+}
+
+/* 2. U CIZÍCH zpráv (jsou vlevo) -> Menu zarovnáme DOLEVA (aby se otevřelo do prava a ne do sidebaru) */
+.friend-message .action-menu {
+    left: 0;
+    right: auto;
+    margin-left: -5px; /* Jemná korekce, aby nebylo nalepené */
+}
+
+/* --- ZBYTEK STYLU TLAČÍTEK UVNITŘ (beze změny) --- */
 .action-menu button {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     width: 100%;
     text-align: left;
-    background: none;
+    background: transparent;
     border: none;
-    color: #eee;
+    color: #ffffff;
     padding: 8px 12px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 4px;
+    transition: background 0.2s;
 }
 
 .action-menu button:hover {
-    background: #444;
+    background: var(--accent);
+    color: #000;
 }
 
 .action-menu .delete-opt {
-    color: #ff5555;
+    color: #ff6b6b;
+}
+
+.action-menu .delete-opt:hover {
+    background: #ff6b6b;
+    color: white;
 }
 
 /* Indikátory */
@@ -355,7 +387,7 @@ header {
 }
 
 .deleted-text {
-    color: #888;
+    color: #aaa;
     font-style: italic;
 }
 .message-bubble.deleted {
@@ -363,29 +395,204 @@ header {
     border: 1px dashed #444;
 }
 
-/* Banner při editaci */
 .editing-banner {
     position: absolute;
-    bottom: 60px; /* Nad inputem */
-    left: 20px;
-    right: 20px;
-    background: #2b2b2b;
-    padding: 5px 15px;
-    border-radius: 5px;
+    bottom: 100%; /* Hned nad inputem */
+    left: 0;
+    right: 0;
+    background: #1e1e1e;
+    padding: 10px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border: 1px solid #7289da;
-    color: #7289da;
-    font-size: 12px;
-}
-.editing-banner button {
-    background: none;
-    border: none;
-    color: #fff;
-    cursor: pointer;
+    border-top: 1px solid var(--accent); /* Fialová linka nahoře */
+    border-bottom: 1px solid #333;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    z-index: 5;
+    animation: slideUp 0.2s ease;
 }
 
+.editing-banner span {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+}
+
+.editing-banner span::before {
+    content: '✎';
+    color: var(--accent);
+    font-size: 1.1rem;
+}
+
+.editing-banner button {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.85rem;
+    width: auto;
+    padding: 4px 10px;
+    border-radius: 4px;
+    box-shadow: none;
+    text-transform: none;
+}
+
+.editing-banner button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transform: none;
+}
+/* --- STYLY PRO ODPOVĚDI (REPLY) - OPRAVENÁ ČITELNOST --- */
+
+/* Obecný kontejner citace */
+.reply-quote {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 8px; /* Větší mezera pod citací */
+    padding: 8px 12px; /* Více prostoru uvnitř */
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 1. VZHLED NA CIZÍ ZPRÁVĚ (Tmavě šedá bublina) */
+/* Citaci uděláme o něco světlejší než bublinu, aby vystoupila */
+.friend-message .reply-quote {
+    background: rgba(255, 255, 255, 0.08); /* Jemný světlý filtr */
+    border-left: 4px solid var(--accent); /* Výrazný fialový proužek vlevo */
+}
+
+.friend-message .reply-author {
+    font-weight: 700;
+    color: var(--accent); /* Jméno autora fialově */
+    margin-bottom: 4px;
+    font-size: 0.8rem;
+}
+
+.friend-message .reply-content {
+    color: #e0e0e0; /* Text téměř bílý pro dobrou čitelnost */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* 2. VZHLED NA MÉ ZPRÁVĚ (Fialová bublina) */
+/* Citaci uděláme tmavší, aby se oddělila od fialového pozadí */
+.my-message .reply-quote {
+    background: rgba(0, 0, 0, 0.25); /* Tmavý filtr */
+    border-left: 4px solid rgba(255, 255, 255, 0.6); /* Bílý/šedý proužek vlevo */
+}
+
+.my-message .reply-author {
+    font-weight: 700;
+    color: #ffffff; /* Na mé bublině jméno bíle */
+    margin-bottom: 4px;
+    font-size: 0.8rem;
+}
+
+.my-message .reply-content {
+    color: rgba(255, 255, 255, 0.9); /* Text bílý */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* Styl pro smazanou původní zprávu */
+.reply-content.deleted {
+    font-style: italic;
+    opacity: 0.7;
+}
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+/* Tlačítko pro scroll dolů */
+.scroll-bottom-btn {
+    position: absolute;
+    bottom: 65px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #252525;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 20;
+    animation: fadeIn 0.3s ease;
+}
+
+.scroll-bottom-btn:hover {
+    background: var(--accent);
+    color: #000;
+    transform: translateX(-50%) scale(1.1);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Plovoucí tlačítko "Zrušit" (stejná pozice jako scroll, ale červené) */
+.cancel-float-btn {
+    background: #252525;
+    color: #ff6b6b; /* Červená barva písma */
+    border: 1px solid #ff6b6b; /* Červený rámeček */
+    font-size: 1rem;
+    z-index: 30; /* Aby bylo nad vším */
+}
+
+.cancel-float-btn:hover {
+    background: #ff6b6b;
+    color: white;
+    transform: translateX(-50%) scale(1.1);
+    border-color: #ff6b6b;
+}
+
+/* Pokud chceš, aby plovoucí tlačítko pulzovalo pro upoutání pozornosti */
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+}
+
+.cancel-float-btn {
+    animation: fadeIn 0.3s ease, pulse-red 2s infinite;
+}
+
+/* Notifikační puntík v sidebaru */
+.notification-dot {
+    position: absolute;
+    top: 2px;      /* Posuneme trochu dolů */
+    right: 2px;    /* Posuneme trochu doleva */
+    width: 10px;   /* Menší, decentnější */
+    height: 10px;
+    background-color: #cf6679;
+    border: 2px solid var(--bg-card); /* Olemování barvou pozadí hlavičky (místo #161616) */
+    border-radius: 50%;
+    z-index: 10;
+    pointer-events: none; /* Aby neblokovala kliknutí na tlačítko */
+    animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
 /* Barvy bublinek */
 .my-message .message-bubble { background-color: var(--accent-dark); color: white; border-bottom-right-radius: 2px; }
 .friend-message .message-bubble { background-color: #2c2c2c; color: var(--text-main); border-bottom-left-radius: 2px; }
@@ -564,40 +771,144 @@ header {
 .delete-btn-final { background: var(--error); color: white; box-shadow: none; }
 
 /* =========================================
-   7. SPRÁVCE PŘÁTEL (MODAL)
+   7. SPRÁVCE PŘÁTEL (MODAL - REDESIGN)
    ========================================= */
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center;
-    z-index: 1000; backdrop-filter: blur(5px);
+    background: rgba(0, 0, 0, 0.85);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000;
 }
+
 .modal-content {
-    background: var(--bg-card); width: 90%; max-width: 500px; border-radius: 12px;
-    display: flex; flex-direction: column; max-height: 80vh; border: 1px solid #333;
+    background: #18181b;
+    width: 95%; max-width: 500px; /* Trochu užší */
+    border-radius: 12px;
+    display: flex; flex-direction: column;
+    max-height: 80vh;
+    border: 1px solid #333;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
 }
-.modal-header { padding: 1.5rem; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-.close-btn-icon { background: transparent; border: none; color: var(--text-dim); font-size: 1.2rem; cursor: pointer; width: auto; box-shadow: none; padding: 0; }
-.modal-tabs { display: flex; background: #151515; padding: 5px; }
-.modal-body { padding: 1.5rem; overflow-y: auto; }
 
-/* Search form v modalu */
+/* Hlavička modalu */
+.modal-header {
+    padding: 1rem 1.5rem;
+    background: #202023;
+    border-bottom: 1px solid #333;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.modal-header h3 { margin: 0; font-size: 1.1rem; color: #fff; letter-spacing: 0.5px; }
+
+.close-btn-icon {
+    background: transparent; border: none; color: #aaa;
+    font-size: 1.2rem; cursor: pointer; padding: 5px;
+    transition: color 0.2s; width: auto; box-shadow: none;
+}
+.close-btn-icon:hover { color: #fff; transform: none; }
+
+/* Záložky (Tabs) */
+.modal-tabs {
+    display: flex; background: #121212; padding: 0 15px;
+    border-bottom: 1px solid #333; gap: 15px;
+}
+.modal-tabs button {
+    background: transparent; color: #888;
+    padding: 12px 5px; border-radius: 0;
+    font-size: 0.9rem; font-weight: 600;
+    border-bottom: 2px solid transparent;
+    width: auto; box-shadow: none;
+    transition: all 0.2s;
+    margin-bottom: -1px; /* Aby border překryl linku */
+}
+.modal-tabs button:hover { color: #ddd; background: transparent; transform: none; opacity: 1; }
+.modal-tabs button.active {
+    color: var(--accent); border-bottom-color: var(--accent);
+}
+.badge-count {
+    background: #cf6679; color: white; padding: 1px 5px;
+    border-radius: 10px; font-size: 0.65rem; margin-left: 6px;
+    vertical-align: middle;
+}
+
+/* Tělo modalu */
+.modal-body {
+    padding: 20px; overflow-y: auto;
+    background: #18181b; flex: 1;
+}
+
+/* Search Input */
 .search-form { display: flex; gap: 10px; margin-bottom: 1rem; }
+.search-form input {
+    background: #27272a; border: 1px solid #3f3f46;
+    border-radius: 6px; color: white; padding: 8px 12px;
+    transition: border-color 0.2s; margin-bottom: 0; font-size: 0.9rem;
+}
+.search-form input:focus { border-color: var(--accent); }
+.search-form button { width: auto; padding: 0 15px; font-size: 0.85rem; height: auto; }
 
-/* Výsledek hledání - OPRAVA VELIKOSTI OBRÁZKU */
+/* Výsledky a Karty uživatelů */
+.results-list, .requests-section { display: flex; flex-direction: column; gap: 8px; }
+
 .user-card-row {
-    display: flex; align-items: center; background: #252525;
-    padding: 10px; border-radius: 8px; margin-bottom: 8px; gap: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: #27272a; border: 1px solid #333;
+    padding: 10px; border-radius: 8px;
+    transition: border-color 0.2s;
 }
+.user-card-row:hover { border-color: #555; }
+
+/* Wrapper pro obrázek a text, aby byli vlevo */
+.user-card-row > div:first-child {
+    display: flex;
+    align-items: center;
+}
+
 .user-card-row img {
-    width: 40px !important; /* Důležité: vynutit malou velikost */
-    height: 40px !important;
-    border-radius: 50%;
-    background: #000;
-    object-fit: cover;
+    width: 40px !important; height: 40px !important;
+    border-radius: 50%; object-fit: cover;
+    margin-right: 12px; border: 2px solid #333;
 }
-.user-info-col { flex-grow: 1; display: flex; flex-direction: column; }
-.add-btn, .accept-btn { width: auto; padding: 6px 12px; font-size: 0.8rem; background: var(--accent); color: #000; box-shadow: none; }
-.badge-count { background: var(--error); color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; margin-left: 5px; }
+
+.user-info-col { display: flex; flex-direction: column; justify-content: center; }
+.user-info-col strong { color: #fff; font-size: 0.95rem; margin-bottom: 2px; }
+.user-info-col span { color: #888; font-size: 0.75rem; }
+.admin-badge-text { color: var(--accent); font-size: 0.65rem; font-weight: bold; margin-left: 5px; background: rgba(187,134,252,0.1); padding: 2px 5px; border-radius: 4px; }
+
+/* Tlačítka akcí (Přijmout/Odmítnout) */
+.actions-row { display: flex; gap: 8px; align-items: center; }
+
+/* Malé elegantní tlačítka */
+.add-btn {
+    width: auto; padding: 5px 12px; font-size: 0.75rem;
+    background: var(--accent); color: #000; font-weight: 600;
+    box-shadow: none; border-radius: 4px;
+}
+.add-btn:disabled {
+    background: #333; color: #666; cursor: not-allowed;
+    box-shadow: none; transform: none;
+}
+
+.accept-btn {
+    width: auto; padding: 5px 10px; font-size: 0.75rem;
+    background: rgba(67, 181, 129, 0.2); color: #43b581;
+    border: 1px solid #43b581; box-shadow: none; border-radius: 4px;
+    transition: background 0.2s;
+}
+.accept-btn:hover { background: #43b581; color: white; opacity: 1; transform: none; }
+
+.reject-btn {
+    width: auto; padding: 5px 10px; font-size: 0.75rem;
+    background: rgba(207, 102, 121, 0.1); color: #cf6679;
+    border: 1px solid #cf6679; box-shadow: none; border-radius: 4px;
+    transition: background 0.2s;
+}
+.reject-btn:hover { background: #cf6679; color: white; opacity: 1; transform: none; }
+
+.search-message {
+    text-align: center; color: #666; margin-top: 20px; font-style: italic; font-size: 0.9rem;
+}
+
 
 /* =========================================
    8. ADMIN & AUTH & UTILS
@@ -625,3 +936,494 @@ td { padding: 1rem; border-bottom: 1px solid #2a2a2a; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+/* Tlačítko pro přidání skupiny */
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.add-group-btn {
+    background: #bb86fc;
+    border: none;
+    color: #000;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.add-group-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Modální okno */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #1e1e1e;
+    padding: 20px;
+    border-radius: 10px;
+    width: 400px;
+    border: 1px solid #333;
+    color: white;
+}
+
+.modal-input {
+    width: 100%;
+    padding: 10px;
+    margin: 15px 0;
+    background: #2c2c2c;
+    border: 1px solid #444;
+    color: white;
+    border-radius: 5px;
+}
+
+.friends-selection-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    border: 1px solid #333;
+    padding: 5px;
+}
+
+.friend-select-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    cursor: pointer;
+    border-bottom: 1px solid #2c2c2c;
+}
+
+.friend-select-item:hover { background: #333; }
+.friend-select-item.selected { background: #3a3a3a; border-left: 3px solid #bb86fc; }
+
+.friend-select-item img {
+    width: 30px; height: 30px; border-radius: 50%; margin-right: 10px;
+}
+
+.check-mark { margin-left: auto; color: #bb86fc; }
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btn-cancel { background: transparent; border: 1px solid #555; color: #ccc; padding: 8px 15px; cursor: pointer; border-radius: 5px; }
+.btn-create { background: #bb86fc; border: none; color: #000; padding: 8px 15px; cursor: pointer; border-radius: 5px; font-weight: bold; }
+
+/* --- ADMIN PANEL FULLSCREEN --- */
+.admin-layout-full {
+    display: flex;
+    height: 100vh;
+    background-color: #121212;
+    color: white;
+}
+
+.admin-sidebar {
+    width: 250px;
+    background: #1e1e1e;
+    border-right: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.admin-logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #bb86fc;
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.admin-sidebar nav button {
+    background: transparent;
+    text-align: left;
+    margin-bottom: 10px;
+    color: #aaa;
+    border: 1px solid transparent;
+    box-shadow: none;
+}
+
+.admin-sidebar nav button.active {
+    background: rgba(187, 134, 252, 0.1);
+    color: #bb86fc;
+    border: 1px solid #bb86fc;
+}
+
+.admin-logout {
+    margin-top: auto;
+    background: #cf6679;
+    color: white;
+}
+
+.admin-content {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: #1e1e1e;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #333;
+    text-align: center;
+}
+
+.stat-card h3 { margin: 0 0 10px 0; font-size: 1rem; color: #888; }
+.stat-card p { margin: 0; font-size: 2rem; font-weight: bold; color: white; }
+.stat-card.online p { color: #43b581; }
+
+.recent-logs-panel {
+    grid-column: 1 / -1;
+    background: #1e1e1e;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #333;
+}
+
+.recent-logs-panel ul { list-style: none; padding: 0; }
+.recent-logs-panel li { padding: 8px 0; border-bottom: 1px solid #333; font-size: 0.9rem; }
+.log-time { color: #666; font-family: monospace; margin-right: 10px; }
+
+/* Tables */
+.table-container { background: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #333; }
+.table-container h2 { margin-top: 0; }
+.table-container table { width: 100%; border-collapse: collapse; }
+.table-container th { text-align: left; padding: 10px; border-bottom: 1px solid #444; color: #888; }
+.table-container td { padding: 10px; border-bottom: 1px solid #333; }
+
+.btn-danger-small {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    background: transparent;
+    border: 1px solid #cf6679;
+    color: #cf6679;
+    width: auto;
+    display: inline-block;
+    box-shadow: none;
+}
+.btn-danger-small:hover { background: #cf6679; color: white; }
+
+.role-badge.admin { color: #bb86fc; font-weight: bold; }
+.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; background: #666; }
+.status-dot.online { background: #43b581; }
+
+/* =========================================
+   9. ADMIN PANEL STYLES
+   ========================================= */
+
+/* Dropdown pro filtr logů */
+.log-filter-select {
+    background: #2c2c2c;
+    color: white;
+    border: 1px solid #444;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.log-filter-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* Malé tlačítko (pro tabulky) */
+.btn-small {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    width: auto;
+    background: #333;
+    color: white;
+    border: 1px solid #444;
+    box-shadow: none;
+    display: inline-block;
+}
+
+.btn-small:hover {
+    background: #444;
+    transform: none;
+}
+
+/* Náhled chatu (God Mode) */
+.admin-chat-preview {
+    background: #0d0d0d;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: monospace;
+}
+
+.admin-msg-row {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #222;
+}
+
+.admin-msg-meta {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 2px;
+}
+
+.admin-msg-content {
+    color: #ddd;
+    font-size: 0.9rem;
+}
+
+/* Role Badges */
+.role-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    background: #333;
+    color: #aaa;
+}
+
+.role-badge.admin {
+    background: rgba(187, 134, 252, 0.2);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+}
+
+.role-badge.user {
+    background: rgba(67, 181, 129, 0.1);
+    color: #43b581;
+}
+
+/* Modal vylepšení pro Admina */
+.modal-content.large {
+    width: 600px;
+    max-width: 95vw;
+}
+
+.modal-content h3 {
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+/* --- SKUPINOVÝ CHAT: Identifikace odesílatele --- */
+
+.message-container {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 2px; /* Malá mezera mezi bublinami stejné série */
+}
+
+/* Hlavička odesílatele (Avatar + Jméno) */
+.message-sender-header {
+    display: flex;
+    align-items: center;
+    margin-left: 45px; /* Odsazení, aby to lícovalo s bublinou */
+    margin-top: 10px;  /* Větší mezera před novým blokem zpráv */
+    margin-bottom: 4px;
+}
+
+.sender-mini-avatar {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 50%;
+    margin-right: 8px;
+    border: 1px solid #333;
+}
+
+.sender-name {
+    font-size: 0.75rem;
+    color: #bbb;
+    font-weight: 600;
+}
+
+/* Úprava bublin ve skupině */
+.friend-msg-container .message-row {
+    justify-content: flex-start;
+}
+
+/* Pokud má zpráva hlavičku, bublina pod ní nemá extra margin */
+.first-in-group {
+    margin-top: 0;
+}
+
+/* Moje zprávy (žádná změna, jen pro pořádek) */
+.my-msg-container {
+    align-items: flex-end;
+}
+/* --- ADMIN BADGES & MODALS --- */
+
+/* Barevné štítky pro logy */
+.log-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-left: 5px;
+}
+
+.badge-auth { color: #43b581; background: rgba(67, 181, 129, 0.15); border: 1px solid rgba(67, 181, 129, 0.3); }
+.badge-danger { color: #cf6679; background: rgba(207, 102, 121, 0.15); border: 1px solid rgba(207, 102, 121, 0.3); }
+.badge-success { color: #bb86fc; background: rgba(187, 134, 252, 0.15); border: 1px solid rgba(187, 134, 252, 0.3); }
+.badge-warning { color: #ffb74d; background: rgba(255, 183, 77, 0.15); border: 1px solid rgba(255, 183, 77, 0.3); }
+.badge-default { color: #aaa; background: rgba(255, 255, 255, 0.1); }
+
+/* Tlačítko pro přidání admina (v hlavičce tabulky) */
+.add-admin-btn {
+    width: auto; background: var(--accent); color: #000; padding: 6px 15px;
+    font-weight: bold; border-radius: 20px; box-shadow: 0 4px 15px rgba(187,134,252,0.3);
+    font-size: 0.8rem;
+}
+.add-admin-btn:hover { transform: scale(1.05); }
+
+
+
+.admin-search-input:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+
+/* Úprava tlačítek v tabulce */
+.btn-small {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    margin-right: 5px;
+    background: #333;
+    border: 1px solid #444;
+    color: #ddd;
+    display: inline-block;
+}
+.btn-small:hover { background: #444; }
+
+/* Zarovnání logů */
+.log-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-left: 0;
+}
+/* =========================================
+   10. ADMIN FIXES (OPRAVY VZHLEDU)
+   ========================================= */
+
+/* Oprava obřích avatarů v tabulce */
+.table-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #333;
+    flex-shrink: 0; /* Aby se nesmrskával */
+}
+
+/* Oprava hlavičky tabulky (Hledání + Tlačítko vedle sebe) */
+.table-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap; /* Aby se to na mobilu zalomilo */
+    gap: 15px;
+}
+
+.table-header-row h2 {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Specifický styl pro input v adminu (přebíjí globální width: 100%) */
+input.admin-search-input {
+    width: 250px;
+    margin-bottom: 0; /* Odstraní margin z globálního input stylu */
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    height: 38px; /* Stejná výška jako tlačítko */
+}
+
+/* Tlačítko přidat admina */
+button.add-admin-btn {
+    width: auto;
+    padding: 0 20px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    margin: 0; /* Reset marginu */
+}
+
+/* Oprava tabulky Logů - aby text nepřetékal */
+.table-responsive table {
+    table-layout: fixed; /* Pevná šířka sloupců */
+    width: 100%;
+}
+
+/* Sloupce v logách */
+/* Log Table Columns Fix */
+.log-col-time { width: 160px; }
+.log-col-user { width: 140px; }
+.log-col-action { width: 130px; }
+.log-col-ip { width: 130px; }
+.log-col-details { width: auto; } /* Detail zabere zbytek místa */
+
+/* Text v detailu se může zalomit */
+.table-responsive td {
+    vertical-align: middle;
+    word-break: break-word;
+}
+
+/* Zalamování dlouhého textu v buňkách */
+.table-responsive td {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    vertical-align: middle;
+}
+
+/* Modal pro vytvoření admina - zmenšení a vycentrování */
+.modal-content {
+    max-width: 400px; /* Užší okno */
+    margin: auto;
+}
+
+.modal-content form input {
+    margin-bottom: 15px;
+}
