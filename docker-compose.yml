@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # --- DATABÁZE (PostgreSQL) ---
   db:
     image: postgres:15-alpine
     container_name: whisp_db
@@ -11,29 +10,28 @@ services:
       POSTGRES_DB: whisp_db
     volumes:
       - db_data:/var/lib/postgresql/data
-      # TOTO JE KLÍČOVÉ: Automaticky spustí náš init.sql při prvním startu
       - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
     networks:
       - whisp_net
 
-  # --- BACKEND API (PHP) ---
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: whisp_backend
-    # Spustíme vestavěný PHP server pro vývoj API
     command: php -S 0.0.0.0:8000 -t /var/www/html/public /var/www/html/public/index.php
     ports:
       - "8000:8000"
     environment:
-      # Zde předáváme údaje, které čte Database.php přes getenv()
       DB_HOST: db
       DB_NAME: whisp_db
       DB_USER: whisp_user
       DB_PASS: whisp_password
+      JWT_SECRET: change_this_to_a_long_random_secret_for_dev
+      JWT_TTL_SECONDS: 86400
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
     depends_on:
       - db
     volumes:
@@ -41,14 +39,12 @@ services:
     networks:
       - whisp_net
 
-  # --- WEBSOCKET SERVER (Ratchet) ---
   websocket:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: whisp_websocket
-    # Spustí skript server.php, který jsme opravili v první fázi
-    command: php bin/server.php
+    command: php /var/www/html/bin/server.php
     ports:
       - "8080:8080"
     environment:
@@ -56,26 +52,30 @@ services:
       DB_NAME: whisp_db
       DB_USER: whisp_user
       DB_PASS: whisp_password
+      JWT_SECRET: change_this_to_a_long_random_secret_for_dev
+      JWT_TTL_SECONDS: 86400
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
     depends_on:
       - db
+      - backend
     volumes:
       - ./backend:/var/www/html
     networks:
       - whisp_net
 
-  # --- FRONTEND (React/Vite) ---
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: whisp_frontend
+    ports:
+      - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    ports:
-      - "5173:5173"
-    environment:
-      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
+      - websocket
     networks:
       - whisp_net
 

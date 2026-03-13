@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use App\Config\Database;
+use App\Http\ApiResponse;
 use App\Models\Chat;
 use App\Middleware\AuthMiddleware;
 
@@ -14,16 +15,14 @@ class ChatController {
     }
 
     public function getRooms() {
-        header('Content-Type: application/json');
         $currentUser = AuthMiddleware::check();
         $myId = $currentUser->sub ?? $currentUser->id;
 
         $rooms = $this->chatModel->getUserRooms($myId);
-        echo json_encode($rooms);
+        ApiResponse::success($rooms);
     }
 
     public function openDm() {
-        header('Content-Type: application/json');
         $currentUser = AuthMiddleware::check();
         $myId = $currentUser->sub ?? $currentUser->id;
 
@@ -31,222 +30,213 @@ class ChatController {
         $targetUserId = $data->target_id ?? null;
 
         if (!$targetUserId) {
-            http_response_code(400);
-            echo json_encode(["message" => "Chybí ID uživatele"]);
+            ApiResponse::error('validation_error', 'Chybí ID uživatele', 400);
             return;
         }
 
         $roomId = $this->chatModel->getOrCreateDmRoom($myId, $targetUserId);
 
         if ($roomId) {
-            echo json_encode(["room_id" => $roomId]);
-        } else {
-            http_response_code(500);
-            echo json_encode(["message" => "Chyba při vytváření chatu"]);
+            ApiResponse::success(["room_id" => $roomId]);
+            return;
         }
+
+        ApiResponse::error('chat_open_forbidden', 'Soukromý chat lze otevřít pouze s aktuálním přítelem.', 403);
     }
 
     public function sendMessage() {
-            header('Content-Type: application/json');
-            $currentUser = AuthMiddleware::check();
-            $senderId = $currentUser->sub ?? $currentUser->id;
+        $currentUser = AuthMiddleware::check();
+        $senderId = $currentUser->sub ?? $currentUser->id;
+        $data = json_decode(file_get_contents("php://input"));
 
-            $data = json_decode(file_get_contents("php://input"));
-
-            if (!isset($data->room_id) || !isset($data->content)) {
-                http_response_code(400);
-                echo json_encode(["message" => "Chybí data"]);
-                return;
-            }
-
-            $replyToId = $data->reply_to_id ?? null;
-
-            $message = $this->chatModel->sendMessage($data->room_id, $senderId, $data->content, $replyToId);
-
-            if ($message) {
-                echo json_encode(["message" => "Odesláno", "data" => $message]);
-            } else {
-                http_response_code(403);
-                echo json_encode(["message" => "Nemůžete posílat zprávy do této skupiny (nejste členem)."]);
-            }
+        if (!isset($data->room_id) || !isset($data->content)) {
+            ApiResponse::error('validation_error', 'Chybí data', 400);
+            return;
         }
 
+        $replyToId = $data->reply_to_id ?? null;
+        $message = $this->chatModel->sendMessage($data->room_id, $senderId, $data->content, $replyToId);
+
+        if ($message) {
+            ApiResponse::success(["message" => "Odesláno", "data" => $message]);
+            return;
+        }
+
+        ApiResponse::error('message_send_forbidden', 'Do tohoto chatu již nelze odesílat zprávy.', 403);
+    }
+
     public function getHistory() {
-        header('Content-Type: application/json');
         $currentUser = AuthMiddleware::check();
         $myId = $currentUser->sub ?? $currentUser->id;
 
         if (!isset($_GET['room_id'])) {
-            http_response_code(400);
-            echo json_encode(["message" => "Chybí room_id"]);
+            ApiResponse::error('validation_error', 'Chybí room_id', 400);
             return;
         }
 
-        $messages = $this->chatModel->getRoomMessages($_GET['room_id'], $myId);
-        echo json_encode($messages);
+        if (!$this->chatModel->canAccessRoom((int) $_GET['room_id'], $myId)) {
+            ApiResponse::error('room_access_forbidden', 'Do tohoto chatu již nemáte přístup.', 403);
+            return;
+        }
+
+        $messages = $this->chatModel->getRoomMessages((int) $_GET['room_id'], $myId);
+        ApiResponse::success($messages);
     }
 
     public function deleteMessage() {
-        header('Content-Type: application/json');
         $currentUser = AuthMiddleware::check();
         $myId = $currentUser->sub ?? $currentUser->id;
         $data = json_decode(file_get_contents("php://input"));
 
         if (!isset($data->message_id)) {
-            http_response_code(400);
-            echo json_encode(["message" => "Chybí ID zprávy"]);
+            ApiResponse::error('validation_error', 'Chybí ID zprávy', 400);
             return;
         }
 
         if ($this->chatModel->deleteMessage($data->message_id, $myId)) {
-            echo json_encode(["message" => "Zpráva smazána"]);
-        } else {
-            http_response_code(403);
-            echo json_encode(["message" => "Nelze smazat"]);
+            ApiResponse::success(["message" => "Zpráva smazána"]);
+            return;
         }
+
+        ApiResponse::error('message_delete_forbidden', 'Nelze smazat', 403);
     }
 
     public function updateMessage() {
-        header('Content-Type: application/json');
         $currentUser = AuthMiddleware::check();
         $myId = $currentUser->sub ?? $currentUser->id;
         $data = json_decode(file_get_contents("php://input"));
 
         if (!isset($data->message_id) || !isset($data->content)) {
-            http_response_code(400);
-            echo json_encode(["message" => "Chybí data"]);
+            ApiResponse::error('validation_error', 'Chybí data', 400);
             return;
         }
 
         if ($this->chatModel->editMessage($data->message_id, $myId, $data->content)) {
-            echo json_encode(["message" => "Zpráva upravena"]);
-        } else {
-            http_response_code(403);
-            echo json_encode(["message" => "Nelze upravit"]);
+            ApiResponse::success(["message" => "Zpráva upravena"]);
+            return;
         }
+
+        ApiResponse::error('message_edit_forbidden', 'Nelze upravit', 403);
     }
 
     public function createGroup() {
-        header('Content-Type: application/json');
         $currentUser = AuthMiddleware::check();
         $myId = $currentUser->sub ?? $currentUser->id;
-
         $data = json_decode(file_get_contents("php://input"));
 
         if (empty($data->name) || empty($data->members) || !is_array($data->members)) {
-            http_response_code(400);
-            echo json_encode(["message" => "Chybí název skupiny nebo členové"]);
+            ApiResponse::error('validation_error', 'Chybí název skupiny nebo členové', 400);
             return;
         }
 
         if (count($data->members) < 2) {
-            http_response_code(400);
-            echo json_encode(["message" => "Skupina musí mít alespoň 3 členy (vy + minimálně 2 přátelé)."]);
+            ApiResponse::error('validation_error', 'Skupina musí mít alespoň 3 členy (vy + minimálně 2 přátelé).', 400);
             return;
         }
 
         $roomId = $this->chatModel->createGroup($data->name, $myId, $data->members);
 
         if ($roomId) {
-            echo json_encode(["message" => "Skupina vytvořena", "room_id" => $roomId]);
-        } else {
-            http_response_code(500);
-            echo json_encode(["message" => "Chyba při vytváření skupiny"]);
+            ApiResponse::success(["message" => "Skupina vytvořena", "room_id" => $roomId]);
+            return;
         }
+
+        ApiResponse::error('group_create_failed', 'Chyba při vytváření skupiny', 500);
     }
 
     public function getGroupMembers() {
-        header('Content-Type: application/json');
         if (!isset($_GET['room_id'])) {
-            http_response_code(400); echo json_encode(["message" => "Chybí room_id"]); return;
+            ApiResponse::error('validation_error', 'Chybí room_id', 400);
+            return;
         }
         $members = $this->chatModel->getGroupMembers($_GET['room_id']);
-        echo json_encode($members);
+        ApiResponse::success($members);
     }
 
     public function addGroupMember() {
-        header('Content-Type: application/json');
         $data = json_decode(file_get_contents("php://input"));
 
         if (empty($data->room_id) || empty($data->user_id)) {
-            http_response_code(400); echo json_encode(["message" => "Chybí data"]); return;
+            ApiResponse::error('validation_error', 'Chybí data', 400);
+            return;
         }
 
         if ($this->chatModel->addGroupMember($data->room_id, $data->user_id)) {
-            echo json_encode(["message" => "Člen přidán"]);
-        } else {
-            http_response_code(500); echo json_encode(["message" => "Nelze přidat (možná už tam je)"]);
+            ApiResponse::success(["message" => "Člen přidán"]);
+            return;
         }
+
+        ApiResponse::error('group_member_add_failed', 'Nelze přidat (možná už tam je)', 500);
     }
 
-   public function leaveGroup() {
-           header('Content-Type: application/json');
-           $currentUser = AuthMiddleware::check();
-           $myId = $currentUser->sub ?? $currentUser->id;
-           $data = json_decode(file_get_contents("php://input"));
+    public function leaveGroup() {
+        $currentUser = AuthMiddleware::check();
+        $myId = $currentUser->sub ?? $currentUser->id;
+        $data = json_decode(file_get_contents("php://input"));
 
-           if (empty($data->room_id)) {
-               http_response_code(400); echo json_encode(["message" => "Chybí room_id"]); return;
-           }
+        if (empty($data->room_id)) {
+            ApiResponse::error('validation_error', 'Chybí room_id', 400);
+            return;
+        }
 
-           if ($this->chatModel->leaveGroupSafe($data->room_id, $myId)) {
+        if ($this->chatModel->leaveGroupSafe($data->room_id, $myId)) {
+            $count = $this->chatModel->getMemberCount($data->room_id);
+            if ($count == 0) {
+                ApiResponse::success(["message" => "Opustili jste skupinu (skupina je nyní prázdná a archivována)"]);
+                return;
+            }
+            ApiResponse::success(["message" => "Opustili jste skupinu"]);
+            return;
+        }
 
-               $count = $this->chatModel->getMemberCount($data->room_id);
-               if ($count == 0) {
-                   echo json_encode(["message" => "Opustili jste skupinu (skupina je nyní prázdná a archivována)"]);
-               } else {
-                   echo json_encode(["message" => "Opustili jste skupinu"]);
-               }
-
-           } else {
-               http_response_code(500);
-               echo json_encode(["message" => "Chyba při opouštění skupiny"]);
-           }
-       }
+        ApiResponse::error('group_leave_failed', 'Chyba při opouštění skupiny', 500);
+    }
 
     public function updateGroup() {
-        header('Content-Type: application/json');
         $currentUser = AuthMiddleware::check();
         $myId = $currentUser->sub ?? $currentUser->id;
         $data = json_decode(file_get_contents("php://input"));
 
         if (empty($data->room_id) || empty($data->name)) {
-            http_response_code(400); echo json_encode(["message" => "Chybí data"]); return;
+            ApiResponse::error('validation_error', 'Chybí data', 400);
+            return;
         }
 
         $role = $this->chatModel->getMemberRole($data->room_id, $myId);
         if ($role !== 'admin') {
-            http_response_code(403); echo json_encode(["message" => "Nemáte oprávnění"]); return;
+            ApiResponse::error('forbidden', 'Nemáte oprávnění', 403);
+            return;
         }
 
         if ($this->chatModel->updateGroupInfo($data->room_id, $data->name, $data->avatar_url ?? null)) {
-            echo json_encode(["message" => "Skupina upravena"]);
-        } else {
-            http_response_code(500); echo json_encode(["message" => "Chyba úpravy"]);
+            ApiResponse::success(["message" => "Skupina upravena"]);
+            return;
         }
+
+        ApiResponse::error('group_update_failed', 'Chyba úpravy', 500);
     }
 
     public function kickMember() {
-        header('Content-Type: application/json');
         $currentUser = AuthMiddleware::check();
         $myId = $currentUser->sub ?? $currentUser->id;
         $data = json_decode(file_get_contents("php://input"));
 
         if (empty($data->room_id) || empty($data->user_id)) {
-            http_response_code(400); echo json_encode(["message" => "Chybí data"]); return;
+            ApiResponse::error('validation_error', 'Chybí data', 400);
+            return;
         }
 
         $role = $this->chatModel->getMemberRole($data->room_id, $myId);
         if ($role !== 'admin') {
-            http_response_code(403); echo json_encode(["message" => "Nemáte oprávnění vyhazovat"]); return;
+            ApiResponse::error('forbidden', 'Nemáte oprávnění vyhazovat', 403);
+            return;
         }
 
         if ($this->chatModel->removeGroupMember($data->room_id, $data->user_id)) {
-            echo json_encode(["message" => "Uživatel odstraněn"]);
-        } else {
-            http_response_code(500); echo json_encode(["message" => "Chyba odstranění"]);
+            ApiResponse::success(["message" => "Uživatel odstraněn"]);
+            return;
         }
+
+        ApiResponse::error('group_member_remove_failed', 'Chyba odstranění', 500);
     }
-
-
 }

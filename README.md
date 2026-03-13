@@ -23,6 +23,11 @@ docker compose up --build
 ## Dokumentace
 Rozcestník: [`docs/README.md`](docs/README.md)
 
+## Testy
+- Frontend unit testy: `cd frontend && npm test`
+- Backend validator smoke test: `php backend/tests/validator_smoke_test.php`
+- API smoke test nad běžícím stackem: `./tests/api_smoke_test.sh`
+
 ## Struktura repozitáře (high-level)
 - `frontend/` – React klient
 - `backend/` – PHP API + Ratchet WS server + init DB
@@ -30,9 +35,5 @@ Rozcestník: [`docs/README.md`](docs/README.md)
 - `docker-compose.yml` – lokální prostředí
 
 ## Bezpečnostní poznámka
-Projekt aktuálně používá:
-- JWT podpis klíčem uloženým přímo ve zdrojáku (`backend/src/Services/JWTService.php`)
-- token posílá do WS serveru přes query string (`ws://.../?token=...`)
-
-Viz **`docs/issue.md`** pro bezpečnostní a architektonický audit a návrhy oprav.
+Projekt používá JWT uložené v konfiguraci prostředí a WebSocket autentizaci přes úvodní `auth` zprávu po navázání spojení. Přehled bezpečnostních pravidel a otevřených bodů dalšího rozvoje je popsán v [`docs/09_security_model.md`](docs/09_security_model.md) a [`docs/issue.md`](docs/issue.md).
 

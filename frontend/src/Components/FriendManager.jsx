@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../Context/AuthContext';
 
+const notify = (message, type = 'info', timeout = 4200) => {
+    window.dispatchEvent(new CustomEvent('app-notify', { detail: { message, type, timeout } }));
+};
+
 const FriendManager = ({ onClose, onViewProfile, socket, setFriendRequestCount }) => {
     const { api, user } = useContext(AuthContext);
     const [activeTab, setActiveTab] = useState('search');
@@ -24,7 +28,7 @@ const FriendManager = ({ onClose, onViewProfile, socket, setFriendRequestCount }
     const loadRequests = async () => {
         try {
             const res = await api.get('/friends/requests');
-            setPendingRequests(res.data);
+            setPendingRequests(Array.isArray(res.data) ? res.data : []);
         } catch (err) { console.error(err); }
     };
 
@@ -34,8 +38,9 @@ const FriendManager = ({ onClose, onViewProfile, socket, setFriendRequestCount }
         setSearchMessage('');
         try {
             const res = await api.get(`/friends/search?q=${searchQuery}`);
-            setSearchResults(res.data.filter(u => u.id !== user.id));
-            if (res.data.length === 0) setSearchMessage('Nikdo nenalezen.');
+            const users = Array.isArray(res.data) ? res.data : [];
+            setSearchResults(users.filter(u => u.id !== user.id));
+            if (users.length === 0) setSearchMessage('Nikdo nenalezen.');
         } catch (err) { setSearchMessage('Chyba při hledání.'); }
     };
 
@@ -46,7 +51,7 @@ const FriendManager = ({ onClose, onViewProfile, socket, setFriendRequestCount }
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({ type: 'friend_action', targetId: targetId, action: 'request_received' }));
             }
-        } catch (err) { alert('Chyba odesílání (možná už žádost existuje)'); }
+        } catch (err) { notify('Chyba odesílání žádosti. Možná už existuje.', 'error'); }
     };
 
     const acceptRequest = async (requestId, senderId) => {
@@ -59,17 +64,23 @@ const FriendManager = ({ onClose, onViewProfile, socket, setFriendRequestCount }
                 socket.send(JSON.stringify({ type: 'friend_action', targetId: senderId, action: 'accepted' }));
             }
             window.dispatchEvent(new CustomEvent('friend-status-change', { detail: { refresh: true } }));
-            alert('Přátelství přijato!');
-        } catch (err) { alert('Chyba při přijímání.'); }
+            window.dispatchEvent(new CustomEvent('friend-request-handled'));
+            notify('Přátelství přijato.', 'success');
+        } catch (err) { notify('Chyba při přijímání žádosti.', 'error'); }
     };
 
-    const rejectRequest = async (requestId) => {
+    const rejectRequest = async (requestId, senderId) => {
         try {
             await api.post('/friends/reject', { request_id: requestId });
             setPendingRequests(prev => prev.filter(r => r.request_id !== requestId));
             if (setFriendRequestCount) setFriendRequestCount(prev => Math.max(0, prev - 1));
+            if (socket && socket.readyState === WebSocket.OPEN && senderId) {
+                socket.send(JSON.stringify({ type: 'friend_action', targetId: senderId, action: 'rejected' }));
+            }
             window.dispatchEvent(new CustomEvent('friend-request-handled'));
-        } catch (err) { alert('Chyba při odmítání.'); }
+            window.dispatchEvent(new CustomEvent('friend-status-change', { detail: { refresh: true } }));
+            notify('Žádost byla odmítnuta.', 'info');
+        } catch (err) { notify('Chyba při odmítání žádosti.', 'error'); }
     };
 
     return (
@@ -125,7 +136,7 @@ const FriendManager = ({ onClose, onViewProfile, socket, setFriendRequestCount }
                                     <div className="user-info-col"><strong>{req.username}</strong><span>{new Date(req.created_at).toLocaleDateString()}</span></div>
                                     <div className="actions-row">
                                         <button onClick={() => acceptRequest(req.request_id, req.requester_id || req.id)} className="accept-btn">✔ Přijmout</button>
-                                        <button onClick={() => rejectRequest(req.request_id)} className="reject-btn">✕ Odmítnout</button>
+                                        <button onClick={() => rejectRequest(req.request_id, req.requester_id || req.id)} className="reject-btn">✕ Odmítnout</button>
                                     </div>
                                 </div>
                             ))}

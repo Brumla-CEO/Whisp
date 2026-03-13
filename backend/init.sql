@@ -8,9 +8,10 @@ CREATE TABLE IF NOT EXISTS roles (
 );
 
 -- Vložíme defaultní role, pokud neexistují
-INSERT INTO roles (name, description) VALUES
-                                          ('admin', 'Administrator with full access'),
-                                          ('user', 'Standard user')
+INSERT INTO roles (name, description)
+VALUES
+    ('admin', 'Administrator with full access'),
+    ('user', 'Standard user')
 ON CONFLICT (name) DO NOTHING;
 
 -- 2. Users
@@ -26,7 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
                                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Sessions (JWT Invalidace)
+-- 3. Sessions (JWT invalidace)
 CREATE TABLE IF NOT EXISTS sessions (
                                         id SERIAL PRIMARY KEY,
                                         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -36,7 +37,7 @@ CREATE TABLE IF NOT EXISTS sessions (
                                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Rooms (Chat groups & DMs)
+-- 4. Rooms (chat groups & DMs)
 CREATE TABLE IF NOT EXISTS rooms (
                                      id SERIAL PRIMARY KEY,
                                      name VARCHAR(100), -- Pro skupiny
@@ -46,7 +47,7 @@ CREATE TABLE IF NOT EXISTS rooms (
                                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. Room Memberships
+-- 5. Room memberships
 CREATE TABLE IF NOT EXISTS room_memberships (
                                                 room_id INTEGER REFERENCES rooms(id) ON DELETE CASCADE,
                                                 user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -74,10 +75,10 @@ CREATE TABLE IF NOT EXISTS friendships (
                                            addressee_id UUID REFERENCES users(id) ON DELETE CASCADE,
                                            status VARCHAR(20) NOT NULL, -- 'pending', 'accepted', 'rejected'
                                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                           UNIQUE(requester_id, addressee_id)
+                                           UNIQUE (requester_id, addressee_id)
 );
 
--- 8. Activity Logs (Admin)
+-- 8. Activity logs (admin)
 CREATE TABLE IF NOT EXISTS activity_logs (
                                              id SERIAL PRIMARY KEY,
                                              user_id UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -87,7 +88,7 @@ CREATE TABLE IF NOT EXISTS activity_logs (
                                              timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 9. Notifications (Offline messages)
+-- 9. Notifications (offline messages)
 CREATE TABLE IF NOT EXISTS notifications (
                                              id SERIAL PRIMARY KEY,
                                              user_id UUID REFERENCES users(id) ON DELETE CASCADE,

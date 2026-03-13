@@ -21,6 +21,7 @@ Tahle složka obsahuje kompletní dokumentaci projektu **Whisp** ve stylu **hybr
 13. [Dev guide](13_dev_guide.md)
 14. [User guide](14_user_guide.md)
 15. [Deployment](15_deployment.md)
-16. [Audit problémů](issue.md)
+16. [Testování](16_testing.md)
+17. [Audit problémů](issue.md)
 
 > Pozn.: `issue.md` je záměrně detailní. Slouží jako backlog technického dluhu a bezpečnostního hardeningu.

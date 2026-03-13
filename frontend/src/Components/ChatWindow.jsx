@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../Context/AuthContext';
 
+const normalizeDisplayName = (name) => {
+    if (!name) return 'Neznámý uživatel';
+    return String(name).startsWith('deleted_') ? 'Smazaný uživatel' : name;
+};
+
+const notify = (message, type = 'info', timeout = 4200) => {
+    window.dispatchEvent(new CustomEvent('app-notify', { detail: { message, type, timeout } }));
+};
+
 const SendIcon = () => (
     <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
         <path d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"></path>
@@ -62,8 +71,14 @@ const ChatWindow = ({ selectedUser, roomId, onProfileClick, socket }) => {
     useEffect(() => {
         if (roomId) {
             api.get(`/messages/history?room_id=${roomId}`)
-                .then(res => setMessages(res.data))
-                .catch(console.error);
+                .then(res => setMessages(Array.isArray(res.data) ? res.data : []))
+                .catch((err) => {
+                    if (err.response?.status === 403 && selectedUser?.type !== 'group') {
+                        window.dispatchEvent(new CustomEvent('friend-removed', { detail: { userId: selectedUser?.id } }));
+                        return;
+                    }
+                    console.error(err);
+                });
         }
     }, [roomId, api]);
 
@@ -112,7 +127,7 @@ const ChatWindow = ({ selectedUser, roomId, onProfileClick, socket }) => {
                     socket.send(JSON.stringify({ type: 'message_update', roomId, msgId: editingMessage.id, newContent: newMessage }));
                 }
                 cancelAction();
-            } catch (err) { alert("Chyba úpravy"); }
+            } catch (err) { notify('Chyba při úpravě zprávy.', 'error'); }
         } else {
             try {
                 const res = await api.post('/messages/send', { room_id: roomId, content: newMessage, reply_to_id: replyingTo?.id });
@@ -125,8 +140,12 @@ const ChatWindow = ({ selectedUser, roomId, onProfileClick, socket }) => {
                 }
             } catch (err) {
                 if (err.response && err.response.status === 403) {
-                    alert("Byli jste odebráni z této skupiny.");
-                    window.location.reload();
+                    if (selectedUser?.type === 'group') {
+                        notify('Byli jste odebráni z této skupiny.', 'warning');
+                        window.location.reload();
+                    } else {
+                        window.dispatchEvent(new CustomEvent('friend-removed', { detail: { userId: selectedUser?.id } }));
+                    }
                 }
             }
         }
@@ -147,11 +166,7 @@ const ChatWindow = ({ selectedUser, roomId, onProfileClick, socket }) => {
     const myId = user.id || user.sub;
     const activeAction = editingMessage || replyingTo;
     const isGroup = selectedUser.type === 'group';
-    let displayName = isGroup ? selectedUser.name : selectedUser.username;
-
-    if (!isGroup && name && name.startsWith('deleted_')) {
-        name = "Smazaný uživatel";
-    }
+    const displayName = normalizeDisplayName(isGroup ? selectedUser.name : selectedUser.username);
 
     const fallbackAvatar = isGroup ? `https://api.dicebear.com/7.x/initials/svg?seed=${displayName}` : `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`;
     const displayAvatar = (selectedUser.avatar_url && selectedUser.avatar_url.trim() !== '') ? selectedUser.avatar_url : fallbackAvatar;
@@ -182,8 +197,8 @@ const ChatWindow = ({ selectedUser, roomId, onProfileClick, socket }) => {
                             <div key={index} className={`message-container ${isMe ? 'my-msg-container' : 'friend-msg-container'}`}>
                                 {showSenderInfo && (
                                     <div className="message-sender-header">
-                                        <img src={msg.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} alt={msg.username} className="sender-mini-avatar" />
-                                        <span className="sender-name">{msg.username}</span>
+                                        <img src={msg.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${normalizeDisplayName(msg.username)}`} alt={normalizeDisplayName(msg.username)} className="sender-mini-avatar" />
+                                        <span className="sender-name">{normalizeDisplayName(msg.username)}</span>
                                     </div>
                                 )}
                                 <div className={`message-row ${isMe ? 'my-message' : 'friend-message'} ${showSenderInfo ? 'first-in-group' : ''}`}>
@@ -208,7 +223,7 @@ const ChatWindow = ({ selectedUser, roomId, onProfileClick, socket }) => {
                                     <div className={`message-bubble ${msg.is_deleted ? 'deleted' : ''}`}>
                                         {msg.reply_to_id && !msg.is_deleted && (
                                             <div className="reply-quote">
-                                                {repliedMsg ? <><span className="reply-author">{String(repliedMsg.sender_id) === String(myId) ? "Ty" : repliedMsg.username}</span><span className="reply-content">{repliedMsg.content}</span></> : <i>Zpráva nedostupná</i>}
+                                                {repliedMsg ? <><span className="reply-author">{String(repliedMsg.sender_id) === String(myId) ? 'Ty' : normalizeDisplayName(repliedMsg.username)}</span><span className="reply-content">{repliedMsg.content}</span></> : <i>Zpráva nedostupná</i>}
                                             </div>
                                         )}
                                         {msg.is_deleted ? <span className="deleted-text">🚫 <i>Odstraněno</i></span> : <span>{msg.content}</span>}

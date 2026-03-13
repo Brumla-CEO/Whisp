@@ -2,23 +2,25 @@
 namespace App\Controllers;
 
 use App\Config\Database;
-use App\Models\Chat;
+use App\Http\ApiResponse;
+use App\Models\Notification;
 use App\Middleware\AuthMiddleware;
+use App\Validators\NotificationValidator;
 
 class NotificationController {
-    private $chatModel;
+    private Notification $notificationModel;
 
     public function __construct() {
         $db = (new Database())->getConnection();
-        $this->chatModel = new Chat($db);
+        $this->notificationModel = new Notification($db);
     }
 
     public function getUnread() {
         $currentUser = AuthMiddleware::check();
         $myId = $currentUser->sub ?? $currentUser->id;
 
-        $notifications = $this->chatModel->getUnreadNotifications($myId);
-        echo json_encode($notifications);
+        $notifications = $this->notificationModel->getUnreadByUserId($myId);
+        ApiResponse::success($notifications);
     }
 
     public function markRead() {
@@ -26,13 +28,13 @@ class NotificationController {
         $myId = $currentUser->sub ?? $currentUser->id;
         $data = json_decode(file_get_contents("php://input"));
 
-        if (!isset($data->room_id)) {
-            http_response_code(400);
-            echo json_encode(["message" => "Chybí room_id"]);
+        $validationError = NotificationValidator::validateMarkReadPayload($data);
+        if ($validationError !== null) {
+            ApiResponse::error('validation_error', $validationError, 400);
             return;
         }
 
-        $this->chatModel->markAsRead($myId, $data->room_id);
-        echo json_encode(["message" => "Přečteno"]);
+        $this->notificationModel->markAsRead($myId, (int) $data->room_id);
+        ApiResponse::success(["message" => "Přečteno"]);
     }
 }

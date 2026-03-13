@@ -24,3 +24,13 @@ Pro horizontální škálování:
 - pub/sub (Redis) pro broadcast
 - centralizovaná presence
 
+
+
+## Ověření po spuštění
+
+Po startu aplikace je vhodné provést rychlé ověření:
+
+```bash
+php backend/tests/validator_smoke_test.php
+./tests/api_smoke_test.sh
+```

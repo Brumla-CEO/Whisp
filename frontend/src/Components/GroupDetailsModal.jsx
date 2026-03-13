@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../Context/AuthContext';
 
+const normalizeDisplayName = (name) => {
+    if (!name) return 'Neznámý uživatel';
+    return String(name).startsWith('deleted_') ? 'Smazaný uživatel' : name;
+};
+
 const GroupDetailsModal = ({ group, onClose, onLeaveGroup, socket }) => { // <-- PŘIJETÍ SOCKETU
     const { api, user } = useContext(AuthContext);
     const [members, setMembers] = useState([]);
@@ -220,12 +225,12 @@ const GroupDetailsModal = ({ group, onClose, onLeaveGroup, socket }) => { // <--
                             <div key={member.id} className="user-card-row" style={{ justifyContent: 'space-between', background: 'transparent', borderBottom: '1px solid #2c2c2c', borderRadius: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <div style={{ position: 'relative' }}>
-                                        <img src={member.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.username}`} alt="Avatar" style={{width: '35px', height: '35px', border: 'none'}} />
+                                        <img src={member.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${normalizeDisplayName(member.username)}`} alt="Avatar" style={{width: '35px', height: '35px', border: 'none'}} />
                                         <span className={`status-indicator ${member.status === 'online' ? 'online' : 'offline'}`}
                                               style={{ width: '8px', height: '8px', right: '0', bottom: '0', border: '2px solid #1e1e1e' }}></span>
                                     </div>
                                     <div className="user-info-col">
-                                        <span style={{ color: 'white', fontWeight: '500' }}>{member.username}</span>
+                                        <span style={{ color: 'white', fontWeight: '500' }}>{normalizeDisplayName(member.username)}</span>
                                         <span style={{ fontSize: '0.7rem', color: '#888' }}>{member.role === 'admin' ? '👑 Správce' : (member.status === 'online' ? 'Online' : 'Offline')}</span>
                                     </div>
                                 </div>
@@ -246,8 +251,8 @@ const GroupDetailsModal = ({ group, onClose, onLeaveGroup, socket }) => { // <--
                                 {friendsToAdd.map(friend => (
                                     <div key={friend.id} className="user-card-row" style={{ justifyContent: 'space-between', padding: '8px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <img src={friend.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.username}`} alt="Av" style={{width: '30px', height: '30px'}} />
-                                            <span>{friend.username}</span>
+                                            <img src={friend.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${normalizeDisplayName(friend.username)}`} alt="Av" style={{width: '30px', height: '30px'}} />
+                                            <span>{normalizeDisplayName(friend.username)}</span>
                                         </div>
                                         <button onClick={() => handleAddMember(friend.id)} className="add-btn" style={{padding: '4px 10px'}}>Přidat</button>
                                     </div>

@@ -2,50 +2,49 @@
 namespace App\Controllers;
 
 use App\Config\Database;
-use App\Models\User;
 use App\Middleware\AuthMiddleware;
+use App\Models\User;
+use App\Validators\UserValidator;
 
 class UserController {
-    private $user;
-    private $db;
+    private User $user;
 
     public function __construct() {
-        $this->db = (new Database())->getConnection();
-        $this->user = new User($this->db);
+        $db = (new Database())->getConnection();
+        $this->user = new User($db);
     }
 
     public function index() {
         AuthMiddleware::check();
-        $users = $this->user->findAll();
-        echo json_encode($users);
+        echo json_encode($this->user->findAll());
     }
 
-   public function delete($id) {
-           $currentUser = AuthMiddleware::check();
+    public function delete($id) {
+        $currentUser = AuthMiddleware::check();
 
-           if ($currentUser->role !== 'admin' && $currentUser->sub != $id) {
-               http_response_code(403);
-               echo json_encode(["message" => "Nemáte oprávnění."]);
-               return;
-           }
+        if ($currentUser->role !== 'admin' && $currentUser->sub != $id) {
+            http_response_code(403);
+            echo json_encode(["message" => "Nemáte oprávnění."]);
+            return;
+        }
 
-           $userToDelete = $this->user->findById($id);
+        $userToDelete = $this->user->findById($id);
+        $roleName = $this->user->findRoleNameByUserId($id);
 
-           if (isset($userToDelete['role_name']) && $userToDelete['role_name'] === 'admin') {
-               if ($this->user->countAdmins() <= 1) {
-                   http_response_code(403);
-                   echo json_encode(["message" => "Nelze smazat posledního administrátora."]);
-                   return;
-               }
-           }
+        if ($roleName === 'admin' && $this->user->countAdmins() <= 1) {
+            http_response_code(403);
+            echo json_encode(["message" => "Nelze smazat posledního administrátora."]);
+            return;
+        }
 
-           if ($this->user->delete($id)) {
-               echo json_encode(["message" => "Účet byl úspěšně smazán."]);
-           } else {
-               http_response_code(500);
-               echo json_encode(["message" => "Chyba při mazání účtu (pravděpodobně vazby v DB)."]);
-           }
-       }
+        if ($this->user->delete($id)) {
+            echo json_encode(["message" => "Účet byl úspěšně smazán."]);
+            return;
+        }
+
+        http_response_code(500);
+        echo json_encode(["message" => "Chyba při mazání účtu (pravděpodobně vazby v DB)."]);
+    }
 
     public function update($id) {
         $currentUser = AuthMiddleware::check();
@@ -57,6 +56,14 @@ class UserController {
         }
 
         $data = json_decode(file_get_contents("php://input"));
+        $validationError = UserValidator::validateProfileUpdate($data);
+
+        if ($validationError !== null) {
+            http_response_code(400);
+            echo json_encode(["message" => $validationError]);
+            return;
+        }
+
         $existingUser = $this->user->findById($id);
 
         if (isset($data->username) && $data->username !== $existingUser['username']) {
@@ -68,7 +75,7 @@ class UserController {
         }
 
         if ($this->user->update($id, $data)) {
-            $this->user->logActivity($id, 'UPDATE_PROFILE', "Upravil profil", $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN');
+            $this->user->logActivity($id, 'UPDATE_PROFILE', $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN', 'Upravil profil');
 
             $updatedUser = $this->user->findById($id);
 
@@ -84,9 +91,10 @@ class UserController {
                     "status" => "online"
                 ]
             ]);
-        } else {
-            http_response_code(500);
-            echo json_encode(["message" => "Chyba při aktualizaci"]);
+            return;
         }
+
+        http_response_code(500);
+        echo json_encode(["message" => "Chyba při aktualizaci"]);
     }
 }

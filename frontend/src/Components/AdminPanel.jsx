@@ -1,6 +1,15 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { AuthContext } from '../Context/AuthContext';
 
+const notify = (message, type = 'info', timeout = 4200) => {
+    window.dispatchEvent(new CustomEvent('app-notify', { detail: { message, type, timeout } }));
+};
+
+const normalizeDisplayName = (name) => {
+    if (!name) return 'Neznámý uživatel';
+    return String(name).startsWith('deleted_') ? 'Smazaný uživatel' : name;
+};
+
 const AdminPanel = ({ socket }) => {
     const { api, logout } = useContext(AuthContext);
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -57,10 +66,16 @@ const AdminPanel = ({ socket }) => {
         if(confirm(`Opravdu smazat uživatele ${name}? Tato akce je nevratná.`)) {
             try {
                 await api.post('/admin/users/delete', { user_id: id });
-                alert("Uživatel úspěšně smazán.");
+
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ type: 'admin_user_deleted', targetId: id, deletedUsername: name }));
+                    socket.send(JSON.stringify({ type: 'contact_deleted', userId: id }));
+                }
+
+                notify(`Uživatel ${name} byl smazán.`, 'success');
                 loadData();
             } catch(e) {
-                alert("Chyba: " + (e.response?.data?.message || "Nelze smazat uživatele."));
+                notify('Chyba: ' + (e.response?.data?.message || 'Nelze smazat uživatele.'), 'error');
             }
         }
     };
@@ -68,9 +83,25 @@ const AdminPanel = ({ socket }) => {
     const handleDeleteRoom = async (id, name) => {
         if(confirm(`Smazat místnost ${name}?`)) {
             try {
+                let memberIds = [];
+                try {
+                    const detailRes = await api.get(`/admin/rooms/detail?room_id=${id}`);
+                    memberIds = Array.isArray(detailRes.data?.members) ? detailRes.data.members.map(m => m.id) : [];
+                } catch (detailError) {
+                    console.warn('Nepodařilo se načíst členy místnosti pro realtime notifikaci.', detailError);
+                }
+
                 await api.post('/admin/rooms/delete', { room_id: id });
+
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ type: 'admin_room_deleted', roomId: id, roomName: name, memberIds }));
+                }
+
+                notify(`Místnost ${name} byla smazána.`, 'success');
                 loadData();
-            } catch(e){}
+            } catch(e){
+                notify('Chyba při mazání místnosti.', 'error');
+            }
         }
     };
 
@@ -79,12 +110,12 @@ const AdminPanel = ({ socket }) => {
         if(!confirm("Opravdu vytvořit nového administrátora?")) return;
         try {
             await api.post('/admin/create-admin', newAdminForm);
-            alert("Admin úspěšně vytvořen.");
+            notify('Administrátor byl úspěšně vytvořen.', 'success');
             setShowCreateAdmin(false);
             setNewAdminForm({ username: '', email: '', password: '' });
             loadData();
         } catch(e) {
-            alert("Chyba: " + (e.response?.data?.message || "Neznámá chyba"));
+            notify('Chyba: ' + (e.response?.data?.message || 'Neznámá chyba'), 'error');
         }
     };
 
@@ -215,7 +246,7 @@ const AdminPanel = ({ socket }) => {
                                             {u.role_name === 'admin' && <span style={{fontSize:'1.5rem'}}>🛡️</span>}
 
                                             <span style={{fontWeight: u.role_name === 'admin' ? 'bold' : 'normal', color: u.role_name === 'admin' ? '#bb86fc' : 'white'}}>
-                                                {u.username}
+                                                {normalizeDisplayName(u.username)}
                                             </span>
                                         </td>
                                         <td>{u.email}</td>
@@ -339,7 +370,7 @@ const AdminPanel = ({ socket }) => {
                             {roomDetail.members.map(m => (
                                 <li key={m.id} className="friend-select-item" style={{cursor:'default'}}>
                                     <img src={m.avatar_url} alt="" />
-                                    <span>{m.username}</span>
+                                    <span>{normalizeDisplayName(m.username)}</span>
                                     {m.role === 'admin' && <span className="role-badge admin" style={{marginLeft:'auto'}}>Admin</span>}
                                 </li>
                             ))}
@@ -353,7 +384,7 @@ const AdminPanel = ({ socket }) => {
             {userDetail && (
                 <div className="modal-overlay" onClick={() => setUserDetail(null)}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <h3>Detail: {userDetail.user.username}</h3>
+                        <h3>Detail: {normalizeDisplayName(userDetail.user.username)}</h3>
                         <div style={{display:'flex', gap:'20px', marginBottom:'20px'}}>
                             {userDetail.user.role_name !== 'admin' ? (
                                 <img src={userDetail.user.avatar_url} style={{width:'80px', height:'80px', borderRadius:'50%'}} alt=""/>
@@ -387,7 +418,7 @@ const AdminPanel = ({ socket }) => {
                         <div style={{flex:1, overflowY:'auto', background:'#0d0d0d', padding:'10px', borderRadius:'5px', marginBottom:'10px', height:'400px'}}>
                             {chatPreview.messages.length === 0 ? <p>Žádné zprávy</p> : chatPreview.messages.map((m, i) => (
                                 <div key={i} style={{marginBottom:'10px', borderBottom:'1px solid #333', paddingBottom:'5px'}}>
-                                    <strong style={{color:'#bb86fc'}}>{m.username}</strong> <span style={{fontSize:'0.7rem', color:'#666'}}>{new Date(m.created_at).toLocaleString()}</span>
+                                    <strong style={{color:'#bb86fc'}}>{normalizeDisplayName(m.username)}</strong> <span style={{fontSize:'0.7rem', color:'#666'}}>{new Date(m.created_at).toLocaleString()}</span>
                                     <div style={{color:'#ddd', marginTop:'2px'}}>{m.content}</div>
                                 </div>
                             ))}

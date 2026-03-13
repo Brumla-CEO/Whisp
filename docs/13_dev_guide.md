@@ -64,3 +64,13 @@ npm run dev -- --host
 - user: `whisp_user`
 - password: `whisp_password`
 
+
+
+## Ověření po spuštění
+
+Po startu aplikace je vhodné provést rychlé ověření:
+
+```bash
+php backend/tests/validator_smoke_test.php
+./tests/api_smoke_test.sh
+```

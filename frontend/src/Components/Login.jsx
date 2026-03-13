@@ -4,15 +4,18 @@ import { AuthContext } from '../Context/AuthContext';
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
     const { login } = useContext(AuthContext);
 
     const handleLogin = async (e) => {
         e.preventDefault();
+
         try {
-            await login(email, password);
+            setError('');
+            await login(email.trim(), password);
         } catch (err) {
             setPassword('');
-            alert('Špatný email nebo heslo');
+            setError(err.response?.data?.message || 'Neplatný email nebo heslo');
         }
     };
 
@@ -23,17 +26,18 @@ const Login = () => {
                 <input
                     type="email"
                     placeholder="Email"
-                    value={email} // Přidáno pro kontrolu stavu
+                    value={email}
                     onChange={e => setEmail(e.target.value)}
                     required
                 />
                 <input
                     type="password"
                     placeholder="Heslo"
-                    value={password} // Přidáno pro kontrolu stavu
+                    value={password}
                     onChange={e => setPassword(e.target.value)}
                     required
                 />
+                {error && <div className="auth-error">{error}</div>}
                 <button type="submit">Přihlásit se</button>
             </form>
         </div>
