@@ -5,27 +5,26 @@ use PDO;
 use PDOException;
 
 class Database {
-    private $host = "db";
-    private $db_name = "whisp_db";
-    private $username = "whisp_user";
-    private $password = "whisp_password";
     public $conn;
 
     public function getConnection() {
         $this->conn = null;
 
         try {
+            $host = getenv('DB_HOST') ?: 'db';
+            $db_name = getenv('DB_NAME') ?: 'whisp_db';
+            $username = getenv('DB_USER') ?: 'whisp_user';
+            $password = getenv('DB_PASS') ?: 'whisp_password';
 
-            $dsn = "pgsql:host=" . $this->host . ";port=5432;dbname=" . $this->db_name;
+            $dsn = "pgsql:host=" . $host . ";port=5432;dbname=" . $db_name;
 
-            $this->conn = new PDO($dsn, $this->username, $this->password);
-
+            $this->conn = new PDO($dsn, $username, $password);
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
             $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
         } catch(PDOException $exception) {
-            echo "Chyba připojení k DB: " . $exception->getMessage();
+            error_log("Connection error: " . $exception->getMessage());
+            echo "Chyba připojení k DB. Zkontrolujte logy.";
             exit();
         }
 
