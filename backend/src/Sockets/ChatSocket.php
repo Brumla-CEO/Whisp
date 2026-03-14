@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Sockets;
 
 use Ratchet\MessageComponentInterface;
