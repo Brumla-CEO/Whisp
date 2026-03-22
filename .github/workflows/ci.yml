@@ -33,7 +33,7 @@ jobs:
 
       - name: Spuštění PHPUnit testů
         working-directory: backend
-        run: php vendor/bin/phpunit --testdox --colors=always
+        run: php vendor/bin/phpunit --bootstrap vendor/autoload.php tests/Unit --testdox
 
   frontend-tests:
     name: "Frontend – React Unit Tests"
