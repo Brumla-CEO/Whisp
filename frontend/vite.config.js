@@ -1,18 +1,23 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react({
-      babel: {
-        plugins: [['babel-plugin-react-compiler']],
-      },
-    }),
-  ],
+    plugins: [
+        react({
+            babel: {
+                plugins: [['babel-plugin-react-compiler']],
+            },
+        }),
+    ],
 
-  server: {
-    port: 5173,
-    host: true,
-  }
+    server: {
+        port: 5173,
+        host: true,
+    },
+
+    test: {
+        environment: 'jsdom',
+        setupFiles: ['./src/tests/setup.js'],
+        globals: true,
+    },
 })
