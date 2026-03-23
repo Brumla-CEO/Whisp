@@ -1,0 +1,57 @@
+name: Whisp CI Pipeline
+
+on:
+  push:
+    branches: [ main, 'feat/**', 'fix/**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  backend-tests:
+    name: "Backend – PHP Unit Tests"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kódu
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo, pdo_pgsql
+
+      - name: Instalace Composer závislostí
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Nastavení ENV proměnných
+        run: |
+          echo "JWT_SECRET=test-secret-key-min-32-characters-long-for-ci" >> $GITHUB_ENV
+          echo "JWT_TTL_SECONDS=86400" >> $GITHUB_ENV
+
+      - name: Spuštění PHPUnit testů
+        working-directory: backend
+        run: php vendor/bin/phpunit --bootstrap vendor/autoload.php tests/Unit --testdox
+
+  frontend-tests:
+    name: "Frontend – React Unit Tests"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kódu
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalace npm závislostí
+        working-directory: frontend
+        run: npm ci
+
+      - name: Spuštění Vitest testů
+        working-directory: frontend
+        run: npm test

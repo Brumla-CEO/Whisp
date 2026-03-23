@@ -1,6 +1,6 @@
 # Whisp – realtime chat (React + PHP + PostgreSQL + WebSockets)
 
-Whisp je chatovací aplikace se správou uživatelů, přátel, DM i skupinových místností a realtime notifikacemi přes WebSocket (Ratchet).
+Whisp je chatovací aplikace se správou uživatelů, přátel, soukromých zpráv i skupinových místností a realtime notifikacemi přes WebSocket (Ratchet).
 
 - **Frontend:** React (Vite)
 - **Backend API:** PHP 8 (vlastní router, PDO)
