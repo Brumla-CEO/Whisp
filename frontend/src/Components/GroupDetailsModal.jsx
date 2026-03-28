@@ -12,18 +12,14 @@ const GroupDetailsModal = ({ group, onClose, onLeaveGroup, socket }) => { // <--
     const [friendsToAdd, setFriendsToAdd] = useState([]);
     const [isAdding, setIsAdding] = useState(false);
 
-    // Editační stavy
     const [isEditing, setIsEditing] = useState(false);
 
-    // Lokální stavy pro zobrazení
     const [currentName, setCurrentName] = useState(group.name);
     const [currentAvatar, setCurrentAvatar] = useState(group.avatar_url);
 
-    // Stavy formuláře
     const [newName, setNewName] = useState(group.name);
     const [newAvatar, setNewAvatar] = useState(group.avatar_url || '');
 
-    // Detekce chyb
     const [imgError, setImgError] = useState(false);
     const [urlError, setUrlError] = useState(false);
 
@@ -46,7 +42,6 @@ const GroupDetailsModal = ({ group, onClose, onLeaveGroup, socket }) => { // <--
         } else { setUrlError(false); }
     }, [newAvatar]);
 
-    // --- POMOCNÁ FUNKCE PRO NOTIFIKACI ZMĚNY SKUPINY ---
     const notifyGroupChange = () => {
         if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({
@@ -80,7 +75,6 @@ const GroupDetailsModal = ({ group, onClose, onLeaveGroup, socket }) => { // <--
             await api.post('/groups/kick', { room_id: group.id, user_id: memberId });
             fetchMembers();
 
-            // 3. WS: Oznámit vyhození (aby se mu zavřelo okno)
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
                     type: 'group_kick',
@@ -89,7 +83,6 @@ const GroupDetailsModal = ({ group, onClose, onLeaveGroup, socket }) => { // <--
                     groupName: group.name
                 }));
             } else {
-                // Fallback: pokud nejede socket, aspoň pošleme update ostatním
                 notifyGroupChange();
             }
 
@@ -102,7 +95,6 @@ const GroupDetailsModal = ({ group, onClose, onLeaveGroup, socket }) => { // <--
             await api.post('/groups/leave', { room_id: group.id });
             onLeaveGroup();
             onClose();
-            // notifyGroupChange se tady nevolá, protože uživatel odchází, ale server to pořeší
         } catch (err) { alert("Chyba při opouštění"); }
     };
 
@@ -125,7 +117,7 @@ const GroupDetailsModal = ({ group, onClose, onLeaveGroup, socket }) => { // <--
                 detail: { roomId: group.id, name: newName, avatar_url: finalAvatar }
             }));
 
-            notifyGroupChange(); // <--- OZNÁMIT
+            notifyGroupChange();
 
         } catch (err) { console.error(err); alert("Chyba při úpravě skupiny"); }
     };
