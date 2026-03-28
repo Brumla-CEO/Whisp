@@ -51,9 +51,9 @@ $dbUser = 'whisp_user';
 $dbPass = 'whisp_password';
 
 // ===== Admin účet =====
-$adminEmail = env('ADMIN_EMAIL', 'admin@a.a');
+$adminEmail = env('ADMIN_EMAIL', 'a@a.a');
 $adminUsername = env('ADMIN_USERNAME', 'admin');
-$adminPassword = env('ADMIN_PASSWORD', 'admin123');
+$adminPassword = env('ADMIN_PASSWORD', 'a');
 
 // Chování při existujícím uživateli.
 $resetPasswordIfExists = true;
