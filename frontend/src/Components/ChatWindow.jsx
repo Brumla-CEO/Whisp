@@ -27,7 +27,7 @@ const ChatWindow = ({ selectedUser, roomId, onProfileClick, socket }) => {
     const [newMessage, setNewMessage] = useState('');
     const messagesEndRef = useRef(null);
 
-    // BEZPEČNÁ INICIALIZACE STATUSU
+
     const [headerStatus, setHeaderStatus] = useState(selectedUser?.status ?? 'offline');
 
     const [activeMenuId, setActiveMenuId] = useState(null);
@@ -35,14 +35,12 @@ const ChatWindow = ({ selectedUser, roomId, onProfileClick, socket }) => {
     const [replyingTo, setReplyingTo] = useState(null);
     const [showScrollButton, setShowScrollButton] = useState(false);
 
-    // Reset statusu při přepnutí uživatele
     useEffect(() => {
         setHeaderStatus(selectedUser?.status ?? 'offline');
     }, [selectedUser]);
 
     if (!selectedUser) return null;
 
-    // --- 1. PRESENCE (Jsem v místnosti) ---
     useEffect(() => {
         if (!roomId || !socket || socket.readyState !== WebSocket.OPEN) return;
 
@@ -67,7 +65,6 @@ const ChatWindow = ({ selectedUser, roomId, onProfileClick, socket }) => {
         };
     }, [roomId, socket, selectedUser?.id, api]);
 
-    // --- 2. NAČTENÍ HISTORIE ---
     useEffect(() => {
         if (roomId) {
             api.get(`/messages/history?room_id=${roomId}`)
@@ -84,7 +81,6 @@ const ChatWindow = ({ selectedUser, roomId, onProfileClick, socket }) => {
 
     useEffect(() => scrollToBottom(), [messages]);
 
-    // --- 3. LIVE ZPRÁVY ---
     useEffect(() => {
         const handleUpdate = (e) => {
             const data = e.detail;

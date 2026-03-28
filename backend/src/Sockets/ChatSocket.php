@@ -200,8 +200,6 @@ class ChatSocket implements MessageComponentInterface
                 ]);
                 break;
 
-            // FIX #1: Používáme $senderId (ověřený ze session), nikoliv $data->userId (klientský vstup).
-            // Útočník již nemůže podvrhnout cizí userId a broadcastovat za jiného uživatele.
             case 'contact_deleted':
                 $friends = $this->getUserFriends($senderId);
                 foreach ($friends as $friendId) {
@@ -220,8 +218,6 @@ class ChatSocket implements MessageComponentInterface
                 }
                 break;
 
-            // FIX #2a: Ověříme systémovou admin roli přes DB před provedením akce.
-            // Běžný uživatel nemůže odeslat tento event a způsobit odhlášení kohokoliv.
             case 'admin_user_deleted':
                 if (!$this->isSystemAdmin($senderId)) {
                     echo "⚠️ [SECURITY] User {$senderId} se pokusil o admin akci (admin_user_deleted), ale není admin.\n";
@@ -240,7 +236,6 @@ class ChatSocket implements MessageComponentInterface
                 ]);
                 break;
 
-            // FIX #2b: Stejná ochrana jako u admin_user_deleted.
             case 'admin_room_deleted':
                 if (!$this->isSystemAdmin($senderId)) {
                     echo "⚠️ [SECURITY] User {$senderId} se pokusil o admin akci (admin_room_deleted), ale není admin.\n";
@@ -474,8 +469,6 @@ class ChatSocket implements MessageComponentInterface
         }
     }
 
-    // NOVÁ METODA: Ověří systémovou admin roli přes DB (roles tabulka).
-    // Používá se pro ochranu admin WS eventů (admin_user_deleted, admin_room_deleted).
     private function isSystemAdmin(string $userId): bool
     {
         try {

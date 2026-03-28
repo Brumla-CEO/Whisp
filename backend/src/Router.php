@@ -15,10 +15,10 @@ class Router
 {
     public function handleRequest(): void
     {
-    error_log('ROUTER DEBUG => METHOD: ' . ($_SERVER['REQUEST_METHOD'] ?? 'null') . ' | URI: ' . ($_SERVER['REQUEST_URI'] ?? 'null'));
+    //error_log('ROUTER DEBUG => METHOD: ' . ($_SERVER['REQUEST_METHOD'] ?? 'null') . ' | URI: ' . ($_SERVER['REQUEST_URI'] ?? 'null'));
         $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         $method = $_SERVER['REQUEST_METHOD'];
-error_log('ROUTER PATH => ' . $uri);
+    //error_log('ROUTER PATH => ' . $uri);
         header('Content-Type: application/json; charset=UTF-8');
 
         if ($uri === '/install_admin.php') {

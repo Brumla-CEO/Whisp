@@ -88,7 +88,6 @@ const FriendManager = ({ onClose, onViewProfile, socket, setFriendRequestCount }
             <div className="modal-content" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <h3>Správce přátel</h3>
-                    {/* ZDE JE ZMĚNA: zIndex, aby šlo kliknout */}
                     <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="close-btn-icon" style={{ position: 'relative', zIndex: 10000, cursor: 'pointer', width: 'auto' }}>✕</button>
                 </div>
 

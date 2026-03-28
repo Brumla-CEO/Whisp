@@ -14,24 +14,20 @@ const AdminPanel = ({ socket }) => {
     const { api, logout } = useContext(AuthContext);
     const [activeTab, setActiveTab] = useState('dashboard');
 
-    // Data states
     const [stats, setStats] = useState(null);
     const [users, setUsers] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [logs, setLogs] = useState([]);
 
-    // Filtry a Hledání
     const [logFilter, setLogFilter] = useState('ALL');
     const [userSearch, setUserSearch] = useState('');
 
-    // Modaly
     const [chatPreview, setChatPreview] = useState(null);
     const [userDetail, setUserDetail] = useState(null);
     const [roomDetail, setRoomDetail] = useState(null);
     const [showCreateAdmin, setShowCreateAdmin] = useState(false);
     const [newAdminForm, setNewAdminForm] = useState({ username: '', email: '', password: '' });
 
-    // Načítání dat
     const loadData = async () => {
         try {
             if (activeTab === 'dashboard') { const res = await api.get('/admin/dashboard'); setStats(res.data || null); }
@@ -45,13 +41,11 @@ const AdminPanel = ({ socket }) => {
 
     useEffect(() => { loadData(); }, [activeTab]);
 
-    // Live refresh (jednoduchý interval každé 4 sekundy)
     useEffect(() => {
         const interval = setInterval(() => { loadData(); }, 4000);
         return () => clearInterval(interval);
     }, [activeTab]);
 
-    // --- HELPERY ---
     const getActionBadgeClass = (action) => {
         if (!action) return 'badge-default';
         const act = action.toUpperCase();
@@ -61,7 +55,6 @@ const AdminPanel = ({ socket }) => {
         return 'badge-default';
     };
 
-    // --- AKCE ---
     const handleDeleteUser = async (id, name) => {
         if(confirm(`Opravdu smazat uživatele ${name}? Tato akce je nevratná.`)) {
             try {
@@ -131,7 +124,6 @@ const AdminPanel = ({ socket }) => {
         try { const res = await api.get(`/admin/users/detail?user_id=${user.id}`); setUserDetail({ user: user, history: res.data.logs }); } catch(e){}
     };
 
-    // --- FILTROVÁNÍ ---
     const filteredUsers = users.filter(u => u.username.toLowerCase().includes(userSearch.toLowerCase()));
 
     const filteredLogs = logs.filter(log => {
@@ -157,7 +149,6 @@ const AdminPanel = ({ socket }) => {
             </aside>
 
             <main className="admin-content">
-                {/* DASHBOARD */}
                 {activeTab === 'dashboard' && stats && (
                     <div className="dashboard-grid">
                         <div className="stat-card"><h3>Uživatelé</h3><p>{stats?.counts?.users}</p></div>
@@ -165,7 +156,6 @@ const AdminPanel = ({ socket }) => {
                         <div className="stat-card"><h3>Místnosti</h3><p>{stats?.counts?.rooms}</p></div>
                         <div className="stat-card"><h3>Zprávy</h3><p>{stats?.counts?.messages}</p></div>
 
-                        {/* OPRAVENÁ SEKCE POSLEDNÍ AKTIVITA - NYNÍ JAKO TABULKA */}
                         <div className="recent-logs-panel" style={{gridColumn: '1 / -1'}}>
                             <div className="table-header-row" style={{marginBottom:'10px'}}>
                                 <h3 style={{margin:0}}>Poslední aktivita</h3>
@@ -215,7 +205,6 @@ const AdminPanel = ({ socket }) => {
                     </div>
                 )}
 
-                {/* USERS */}
                 {activeTab === 'users' && (
                     <div className="table-container">
                         <div className="table-header-row">
@@ -238,11 +227,9 @@ const AdminPanel = ({ socket }) => {
                                 {filteredUsers.map(u => (
                                     <tr key={u.id}>
                                         <td style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                                            {/* ZOBRAZIT AVATAR JEN POKUD NENÍ ADMIN */}
                                             {u.role_name !== 'admin' && (
                                                 <img src={u.avatar_url} className="table-avatar" alt=""/>
                                             )}
-                                            {/* Pokud je admin, přidáme jen ikonu štítu - žádná profilovka */}
                                             {u.role_name === 'admin' && <span style={{fontSize:'1.5rem'}}>🛡️</span>}
 
                                             <span style={{fontWeight: u.role_name === 'admin' ? 'bold' : 'normal', color: u.role_name === 'admin' ? '#bb86fc' : 'white'}}>
@@ -255,7 +242,6 @@ const AdminPanel = ({ socket }) => {
                                         <td>
                                             <button onClick={() => handleViewUser(u)} className="btn-small">Detail</button>
 
-                                            {/* Tlačítko smazat je nyní dostupné pro všechny. Backend chrání posledního admina. */}
                                             <button
                                                 onClick={() => handleDeleteUser(u.id, u.username)}
                                                 className="btn-danger-small"
@@ -271,7 +257,6 @@ const AdminPanel = ({ socket }) => {
                     </div>
                 )}
 
-                {/* ROOMS */}
                 {activeTab === 'rooms' && (
                     <div className="table-container">
                         <h2>Správa místností</h2>
@@ -298,7 +283,6 @@ const AdminPanel = ({ socket }) => {
                     </div>
                 )}
 
-                {/* LOGS - OPRAVENÁ TABULKA */}
                 {activeTab === 'logs' && (
                     <div className="table-container">
                         <div className="table-header-row">
@@ -327,26 +311,22 @@ const AdminPanel = ({ socket }) => {
                                     <tr key={l.id}>
                                         <td>{new Date(l.timestamp).toLocaleString()}</td>
 
-                                        {/* Uživatel */}
                                         <td>
                                             <span style={{fontWeight:'500', color:'#fff'}}>
                                                 {l.username || 'System'}
                                             </span>
                                         </td>
 
-                                        {/* Akce (Badge) */}
                                         <td>
                                             <span className={`log-badge ${getActionBadgeClass(l.action)}`}>
                                                 {l.action}
                                             </span>
                                         </td>
 
-                                        {/* Detail - Zde vypíšeme obsah sloupce details */}
                                         <td style={{color: '#aaa', fontSize: '0.9rem'}}>
                                             {l.details ? l.details : '-'}
                                         </td>
 
-                                        {/* IP Adresa - Nyní by měla být čistá IP */}
                                         <td style={{fontFamily:'monospace', fontSize:'0.85rem'}}>
                                             {l.ip_address}
                                         </td>
@@ -359,7 +339,6 @@ const AdminPanel = ({ socket }) => {
                 )}
             </main>
 
-            {/* MODAL - ROOM DETAIL */}
             {roomDetail && (
                 <div className="modal-overlay" onClick={() => setRoomDetail(null)}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -380,7 +359,6 @@ const AdminPanel = ({ socket }) => {
                 </div>
             )}
 
-            {/* MODAL - USER DETAIL */}
             {userDetail && (
                 <div className="modal-overlay" onClick={() => setUserDetail(null)}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -410,7 +388,6 @@ const AdminPanel = ({ socket }) => {
                 </div>
             )}
 
-            {/* MODAL - CHAT PREVIEW */}
             {chatPreview && (
                 <div className="modal-overlay" onClick={() => setChatPreview(null)}>
                     <div className="modal-content large" onClick={e => e.stopPropagation()}>
@@ -428,7 +405,6 @@ const AdminPanel = ({ socket }) => {
                 </div>
             )}
 
-            {/* MODAL: VYTVOŘIT ADMINA */}
             {showCreateAdmin && (
                 <div className="modal-overlay">
                     <div className="modal-content">

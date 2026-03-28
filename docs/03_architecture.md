@@ -1,96 +1,193 @@
-# Architektura systému
+# 03 – Architektura systému
 
-## Kontext
-Whisp je 3‑vrstvá aplikace:
+## Přehled
 
-- **React frontend** (UI + stav aplikace + integrace REST/WS)
-- **PHP backend API** (autentizace, správa uživatelů, přátel, místností, zpráv, admin)
-- **WebSocket server (Ratchet)** (realtime zprávy, presence, notifikace, update eventy)
-- **PostgreSQL** jako jednotný zdroj pravdy (users, sessions, rooms, messages, friendships, notifications, activity_logs)
+Whisp je postavena jako **třívrstvá architektura** (Three-Tier Architecture):
 
-## Komponenty
+- **Klientská vrstva** — React 19 SPA běžící v prohlížeči uživatele
+- **Serverová vrstva** — PHP 8.2 REST API + Ratchet WebSocket server
+- **Datová vrstva** — PostgreSQL 15
 
-```mermaid
-flowchart LR
-  FE[Frontend (React/Vite)\n:5173] -->|REST JSON| API[Backend API (PHP)\n:8000]
-  FE -->|WebSocket| WS[WebSocket (Ratchet)\n:8080]
-  API -->|PDO| DB[(PostgreSQL)\n:5432]
-  WS -->|PDO| DB
-```
+Klíčové architektonické rozhodnutí: REST API a WebSocket server jsou dvě části téže
+serverové vrstvy — sdílejí databázi, aplikační logiku i ENV konfiguraci. Přestože běží
+jako samostatné procesy na různých portech (8000 a 8080), nejde o čtyřvrstvou architekturu.
 
-### Frontend
-- Entrypoint: `frontend/src/main.jsx`
-- Aplikace: `frontend/src/App.jsx`
-- Globální auth + API klient: `frontend/src/Context/AuthContext.jsx`
-- UI moduly: `frontend/src/Components/*`
+---
 
-Frontend komunikuje:
-- přes REST s API (`axios` instance s `baseURL http://<host>:8000/api`)
-- přes WS s Ratchet (`ws://<host>:8080?token=<JWT>`)
+## Komponenty a jejich role
 
-### Backend (REST API)
-- Entrypoint: `backend/public/index.php`
-- Router: `backend/src/Router.php`
-- Controllers: `backend/src/Controllers/*`
-- Models (PDO): `backend/src/Models/*`
-- Middleware: `backend/src/Middleware/AuthMiddleware.php`
-- Services: `backend/src/Services/JWTService.php`
-- DB config: `backend/src/Config/Database.php`
+### Frontend (React 19 SPA)
+- Entry point: `frontend/src/main.jsx`
+- Root komponenta: `frontend/src/App.jsx` (WebSocket logika + Event Bus)
+- Globální stav: `frontend/src/Context/AuthContext.jsx` (user, api, login, logout)
+- Komunikuje přes HTTP REST s backendem na portu 8000
+- Komunikuje přes WebSocket s Ratchet serverem na portu 8080
 
-### Realtime (Ratchet)
-- Start skript: `backend/bin/server.php`
+### Backend REST API (PHP 8.2)
+- Entry point: `backend/public/index.php`
+- Router: `backend/src/Router.php` — URL dispatch na controller metody
+- Controllers: přijímají HTTP požadavky, orchestrují model a vracejí odpovědi
+- Models: zapouzdřují veškerou SQL logiku přes PDO
+- Middleware: CORS, Auth (JWT), RateLimit — průřezové funkce
+- Services: JWTService — generování a dekódování tokenů
+- Validators: validace vstupních dat per doméně
+- HTTP: ApiResponse — standardizovaný JSON formát
+
+### WebSocket Server (Ratchet)
+- Entry point: `backend/bin/server.php`
 - Handler: `backend/src/Sockets/ChatSocket.php`
-- Autentizace: JWT token v query param `token`, dekódování přes `JWTService::decode()`.
+- Implementuje Ratchet `MessageComponentInterface`
+- Drží v paměti aktivní připojení a jejich metadata
+- Komunikuje s PostgreSQL přes stejné PDO připojení jako REST API
 
-## Hlavní runtime toky
+### PostgreSQL 15
+- Schéma: `backend/init.sql` (9 tabulek)
+- Inicializováno automaticky při prvním startu Docker kontejneru
+- Data persistována v Docker volume `db_data`
 
-### 1) Přihlášení (REST)
-```mermaid
-sequenceDiagram
-  participant FE as Frontend
-  participant API as PHP API
-  participant DB as PostgreSQL
+---
 
-  FE->>API: POST /api/login (email, password)
-  API->>DB: SELECT user by email
-  API->>DB: INSERT sessions (token, expires_at)
-  API-->>FE: 200 {token, user}
+## Diagram architektury
+
+```
+Prohlížeč uživatele
+       |
+       |--- HTTP (port 8000) ---------> PHP REST API
+       |                                     |
+       |--- WebSocket (port 8080) ----> Ratchet WS Server
+                                             |
+                                    PostgreSQL 15 (port 5432)
 ```
 
-### 2) Načtení místností (REST)
-```mermaid
-sequenceDiagram
-  participant FE
-  participant API
-  participant DB
+Všechny 4 komponenty běží ve společné Docker síti `whisp_net`.
+Kontejnery komunikují mezi sebou pomocí jmen služeb (např. `db:5432` místo IP adresy).
 
-  FE->>API: GET /api/rooms (Authorization: Bearer <token>)
-  API->>DB: ověření sessions.token + is_active
-  API->>DB: SELECT rooms pro uživatele
-  API-->>FE: 200 {rooms: [...]}
+---
+
+## MVC na backendu
+
+Backend striktně dodržuje vzor MVC (Model-View-Controller).
+V kontextu REST API je View vrstvou JSON odpověď.
+
+```
+HTTP požadavek
+    ↓
+index.php (entry point, global error handler, CORS)
+    ↓
+Router.php (URL dispatch)
+    ↓
+Middleware stack (CorsMiddleware → RateLimitMiddleware → AuthMiddleware)
+    ↓
+Controller (validace vstupů, orchestrace)
+    ↓
+Model (SQL dotazy přes PDO)
+    ↓
+ApiResponse::success() nebo ApiResponse::error()
 ```
 
-### 3) Realtime zpráva (WS)
-```mermaid
-sequenceDiagram
-  participant FE as Frontend
-  participant WS as Ratchet WS
-  participant DB as PostgreSQL
+### Middleware stack (v tomto pořadí)
+1. **CorsMiddleware** — ověří, zda požadavek přichází z povolené domény (ENV whitelist)
+2. **RateLimitMiddleware** — zkontroluje per-IP limity pro daný endpoint
+3. **AuthMiddleware** — dekóduje JWT, ověří aktivní session v DB
 
-  FE->>WS: ws://host:8080?token=JWT
-  WS->>DB: validace JWT + mapování userId
-  FE->>WS: {type:"message:new", roomId, message:{...}}
-  WS->>WS: broadcastToRoom(roomId, payload)
-  WS->>DB: INSERT notifications (pokud příjemce není v aktivní místnosti)
-  WS-->>FE: {type:"message:new"...} (pro všechny členy room)
+---
+
+## Tok HTTP požadavku (příklad: odeslání zprávy)
+
+```
+React klient
+    |
+    | POST /api/messages/send + Bearer JWT
+    ↓
+CorsMiddleware → ověření domény
+    ↓
+RateLimitMiddleware → 120 zpráv / 60 sekund
+    ↓
+AuthMiddleware → JWT decode + DB session check
+    ↓
+ChatController::sendMessage()
+    ↓
+Chat::canAccessRoom() → ověření přístupu uživatele k místnosti
+    ↓
+Chat::sendMessage() → INSERT INTO messages RETURNING id
+    ↓
+ApiResponse::success({message, data: savedMessage})
+    |
+    ↓
+React klient (HTTP odpověď 200)
 ```
 
-## Vrstvy a odpovědnosti (aktuální stav)
-- Router dělá routing + část CORS (v kombinaci s `public/index.php`).
-- Controllers dělají validaci vstupů a v některých případech i přímé SQL (viz audit v `issue.md`).
-- Modely zapouzdřují většinu DB operací pro chat a uživatele.
-- Middleware `AuthMiddleware` řeší ověření JWT a validaci tokenu proti tabulce `sessions`.
+---
 
-## Dopady pro budoucí vývoj
-- Pro produkční nasazení je vhodné sjednotit CORS, přesunout JWT secret do ENV, doplnit rate limiting a zavést jednotný error kontrakt.
-- Pro škálování WS (více instancí) bude potřeba pub/sub (Redis) nebo message broker; současný broadcast je in‑memory.
+## Tok WebSocket zprávy (příklad: broadcast nové zprávy)
+
+```
+React klient (odesílatel)
+    |
+    | WS: {type: 'message:new', roomId: 5, message: {...}}
+    ↓
+ChatSocket::onMessage()
+    ↓
+validateSocketToken() → ověření autentizace spojení
+    ↓
+getRoomMembers(roomId) → SELECT z room_memberships
+    ↓
+Pro každého člena místnosti:
+    - Je online? Je v aktivní místnosti?
+    - ANO → sendToUser({type: 'message:new', ...})
+    - NE  → createNotification() + sendToUser({type: 'notification', ...})
+```
+
+---
+
+## Docker Compose architektura
+
+```yaml
+services:
+  db:           postgres:15-alpine    port 5432
+  backend:      php:8.2-alpine        port 8000  (depends_on: db)
+  websocket:    php:8.2-alpine        port 8080  (depends_on: db, backend)
+  frontend:     node:20-alpine        port 5173  (depends_on: backend, websocket)
+
+volumes:
+  db_data: (persistentní data PostgreSQL)
+
+networks:
+  whisp_net: bridge
+```
+
+Pořadí spouštění je vynuceno direktivou `depends_on`:
+`db` → `backend` → `websocket` → `frontend`
+
+---
+
+## Event Bus na frontendu
+
+Pro komunikaci mezi React komponentami bez přímé hierarchie (prop drilling)
+používá aplikace nativní mechanismus `window.dispatchEvent` a `window.addEventListener`.
+
+```
+App.jsx (WS onmessage handler)
+    |
+    |-- CustomEvent('chat-update')      --> ChatWindow.jsx
+    |-- CustomEvent('friend-status-change') --> UserList.jsx
+    |-- CustomEvent('app-notify')       --> AppAlerts.jsx (toast)
+    |-- CustomEvent('friend-removed')   --> App.jsx (zavřít DM)
+```
+
+Výhoda: komponenty se mohou přihlásit k libovolnému eventu bez nutnosti
+předávat callback funkce přes celý komponentový strom.
+
+---
+
+## Proměnné prostředí
+
+| Proměnná | Hodnota (dev) | Popis |
+|----------|--------------|-------|
+| DB_HOST | db | Hostname databáze v Docker síti |
+| DB_NAME | whisp_db | Název databáze |
+| DB_USER | whisp_user | Uživatel PostgreSQL |
+| DB_PASS | whisp_password | Heslo PostgreSQL |
+| JWT_SECRET | change_this_... | Tajný klíč pro podepisování JWT |
+| JWT_TTL_SECONDS | 86400 | Platnost tokenu (24 hodin) |
+| CORS_ALLOWED_ORIGINS | http://localhost:5173 | Povolené domény |

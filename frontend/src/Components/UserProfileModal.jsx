@@ -11,6 +11,9 @@ const UserProfileModal = ({ user, onClose, socket, onFriendRemoved }) => {
 
     if (!user) return null;
 
+    const isOwnProfile = currentUser && String(currentUser.id) === String(user.id);
+    const displayStatus = isOwnProfile ? 'online' : (user.status ?? 'offline');
+
     const canUnfriend = canShowUnfriendButton(currentUser, user);
 
     const handleUnfriend = async () => {
@@ -46,7 +49,7 @@ const UserProfileModal = ({ user, onClose, socket, onFriendRemoved }) => {
                 <div className="profile-view-body">
                     <div className="profile-view-avatar">
                         <img src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} alt={user.username} />
-                        <span className={`status-indicator-large ${user.status || 'offline'}`}></span>
+                        <span className={`status-indicator-large ${displayStatus}`}></span>
                     </div>
                     <h2>{user.username}</h2>
                     <span className="profile-role">{user.role === 'admin' ? '🛡️ Admin' : 'Uživatel'}</span>
