@@ -8,16 +8,13 @@ const ProfileSetup = ({ socket }) => {
     const [username, setUsername] = useState(user.username || '');
     const [bio, setBio] = useState(user.bio || '');
 
-    // Logika Avataru
     const [avatarType, setAvatarType] = useState('random');
     const [customAvatarUrl, setCustomAvatarUrl] = useState('');
     const [currentSeed, setCurrentSeed] = useState(user.username);
 
-    // Mazání účtu
     const [deleteMode, setDeleteMode] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
-    // Synchronizace formuláře při načtení
     useEffect(() => {
         setUsername(user.username || '');
         setBio(user.bio || '');
@@ -52,7 +49,6 @@ const ProfileSetup = ({ socket }) => {
                 ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentSeed}`
                 : customAvatarUrl;
 
-            // 1. Uložit do DB
             await api.put(`/users/${user.id}`, {
                 username: username,
                 email: user.email,
@@ -60,15 +56,12 @@ const ProfileSetup = ({ socket }) => {
                 avatar_url: finalAvatarUrl
             });
 
-            // 2. Říct ostatním "Změnil jsem se" (před refreshem)
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({ type: 'profile_change' }));
             }
 
             alert('Profil úspěšně aktualizován!');
 
-            // 3. HARD REFRESH STRÁNKY (F5)
-            // Toto zajistí, že se načtou nová data z DB a vše se aktualizuje u vás
             window.location.reload();
 
         } catch (err) {

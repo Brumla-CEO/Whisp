@@ -6,6 +6,7 @@ declare(strict_types=1);
  *
  * Spuštění:
  *   docker exec -it whisp_backend php public/install_admin.php
+ *   http://localhost:8000/install_admin.php?token=install_admin
  */
 
 const WEB_TOKEN = 'install_admin';
@@ -50,9 +51,9 @@ $dbUser = 'whisp_user';
 $dbPass = 'whisp_password';
 
 // ===== Admin účet =====
-$adminEmail = env('ADMIN_EMAIL', 'a@a.a');
+$adminEmail = env('ADMIN_EMAIL', 'admin@a.a');
 $adminUsername = env('ADMIN_USERNAME', 'admin');
-$adminPassword = env('ADMIN_PASSWORD', 'a');
+$adminPassword = env('ADMIN_PASSWORD', 'admin123');
 
 // Chování při existujícím uživateli.
 $resetPasswordIfExists = true;
@@ -171,4 +172,4 @@ try {
     ]);
 }
 
-// http://localhost:8000/install_admin.php?token=install_admin
+

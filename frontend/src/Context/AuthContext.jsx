@@ -9,7 +9,6 @@ export const AuthProvider = ({ children }) => {
 
     const alertShown = useRef(false);
 
-    // Změna: Dynamická URL
     const api = axios.create({
         baseURL: `http://${window.location.hostname}:8000/api`
     });

@@ -1,531 +1,535 @@
-# Whisp – kompletní manuální testovací scénář
+# Whisp – Manuální testovací plán
 
-Tento soubor je navržený jako praktický checklist pro finální ověření aplikace **Whisp** po všech úpravách. Cílem je projít systém od registrace až po administraci a ověřit, že:
-
-- funguje autentizace,
-- funguje práce s profily,
-- funguje přátelství a žádosti,
-- fungují DM a skupiny,
-- fungují notifikace a websocket synchronizace,
-- fungují admin funkce,
-- aplikace se nerozsypává po refreshi, odhlášení nebo neplatných akcích.
+Tento dokument slouží jako **praktický průvodce testováním** celé aplikace Whisp.
+Projdi kapitoly v pořadí, jak jsou napsány — každý krok navazuje na předchozí.
 
 ---
 
-# 1. Příprava prostředí
+## Příprava před testováním
 
-Než začneš testovat:
+### Spuštění aplikace
+```bash
+docker compose up --build
+docker exec -it whisp_backend php public/install_admin.php
+```
 
-1. Spusť celý projekt.
-2. Ověř, že běží:
-   - frontend,
-   - backend,
-   - websocket server,
-   - databáze.
-3. Otevři si alespoň **dva různé prohlížeče** nebo jedno okno + anonymní režim.
-4. Připrav si minimálně tyto účty:
-   - **admin**
-   - **user A**
-   - **user B**
-   - **user C**
-   - volitelně **user D** pro skupinové a hraniční testy
+### Otevři 4 okna prohlížeče
+| Okno | Uživatel | Typ |
+|------|---------|-----|
+| Okno 1 | User A | Normální okno (Chrome) |
+| Okno 2 | User B | Anonymní / jiný prohlížeč |
+| Okno 3 | User C | Anonymní / třetí okno |
+| Okno 4 | Admin | Anonymní / čtvrté okno |
 
-Doporučené rozložení:
-- Prohlížeč 1: user A
-- Prohlížeč 2: user B
-- Prohlížeč 3 / anonymní okno: user C
-- Admin v samostatném okně
+> Každé okno musí být na `http://localhost:5173`
 
 ---
 
-# 2. Test účtů a přihlášení
+## Fáze 1 – Registrace a přihlášení
 
-## 2.1 Registrace nových účtů
-Proveď registraci alespoň 3–4 běžných účtů.
+### 1.1 Registrace platných účtů
 
-### Ověř:
-- registrace projde bez chyby,
-- po registraci se uživatel může přihlásit,
-- nelze registrovat duplicitní username,
-- nelze registrovat duplicitní email,
-- neplatný / prázdný formulář se korektně odmítne,
-- backend vrací rozumnou chybu a frontend ji zobrazí.
+Zaregistruj tyto 4 účty — každý v jiném okně:
 
-### Scénáře:
-- registrace s validními daty,
-- registrace bez username,
-- registrace bez emailu,
-- registrace bez hesla,
-- registrace s duplicitním emailem,
-- registrace s duplicitním username.
+| Účet | Username | Email | Heslo |
+|------|---------|-------|-------|
+| User A | userA | a@test.cz | heslo123 |
+| User B | userB | b@test.cz | heslo123 |
+| User C | userC | c@test.cz | heslo123 |
+| User D (volitelný) | userD | d@test.cz | heslo123 |
+
+**Ověř po každé registraci:**
+- [ ] Přihlášení proběhlo automaticky
+- [ ] V hlavičce se zobrazuje správné username
+- [ ] Sidebar se načetl (i když je prázdný)
 
 ---
 
-## 2.2 Login / logout
-U každého testovacího účtu proveď:
+### 1.2 Negativní testy registrace
+Proveď v libovolném okně — po každém testu stránku obnoš:
 
-1. přihlášení,
-2. refresh stránky,
-3. odhlášení,
-4. znovu přihlášení.
-
-### Ověř:
-- login funguje,
-- po refreshi uživatel zůstane přihlášený,
-- websocket se po loginu připojí,
-- po logoutu se stav vyčistí,
-- po logoutu nejde otevřít chráněné endpointy,
-- po novém loginu vše funguje znovu.
-
-### Hraniční testy:
-- špatné heslo,
-- neexistující účet,
-- login s prázdnými poli.
+- [ ] Registrace **bez username** → zobrazí chybu, neprojde
+- [ ] Registrace **bez emailu** → zobrazí chybu, neprojde
+- [ ] Registrace **s heslem kratším než 6 znaků** → zobrazí chybu, neprojde
+- [ ] Registrace **s neplatným emailem** (např. `ahoj`) → zobrazí chybu
+- [ ] Registrace **s duplicitním emailem** (použij `a@test.cz`) → zobrazí `email je obsazen`
+- [ ] Registrace **s duplicitním username** (použij `userA`) → zobrazí `jméno je obsazeno`
 
 ---
 
-# 3. Test vlastního profilu
+### 1.3 Admin přihlášení
+V okně 4 se přihlas jako admin:
+- Email: `a@a.a`
+- Heslo: `a`
 
-Přihlas se jako user A.
-
-## Ověř:
-- v hlavičce se zobrazuje správné username,
-- po kliknutí na vlastní profil se otevře profilový modal,
-- na vlastním profilu **není** tlačítko „Odebrat z přátel“,
-- lze upravit profilové údaje podle toho, co aplikace dovoluje,
-- změna profilovky / bio / jména se po uložení projeví,
-- změny se po refreshi zachovají.
-
-### Doporučené akce:
-- změň bio,
-- změň avatar / profilovou fotku,
-- ověř refresh,
-- ověř zobrazení změn v jiném okně jiného uživatele.
+- [ ] Přihlášení proběhlo → zobrazuje se Admin Panel (ne chat)
 
 ---
 
-# 4. Test vyhledávání uživatelů a žádostí o přátelství
+### 1.4 Login/Logout cyklus
+Proveď v okně 1 (User A):
 
-## 4.1 Odeslání žádosti
-Jako user A vyhledej user B a pošli mu žádost.
+1. Odhlásit se
+2. Přihlásit se znovu
+3. Obnovit stránku (F5)
 
-### Ověř:
-- user B dostane notifikaci / tečku / indikaci,
-- žádost se zobrazí v pending requests,
-- user A nepošle žádost sám sobě,
-- duplicitní žádost nejde vytvořit,
-- nelze poslat žádost neexistujícímu uživateli.
+- [ ] Po odhlášení se zobrazí přihlašovací stránka
+- [ ] Po novém přihlášení funguje aplikace
+- [ ] Po F5 zůstane uživatel přihlášen (session token v localStorage)
 
----
-
-## 4.2 Odmítnutí žádosti
-Jako user B žádost od user A odmítni.
-
-### Ověř:
-- request zmizí ze seznamu pending,
-- notifikační tečka zhasne ihned,
-- user A není přidán do přátel,
-- user A vidí po refreshi správný stav,
-- žádost se nevrací zpět po obnovení stránky.
+**Negativní testy přihlášení:**
+- [ ] Špatné heslo → zobrazí `Neplatný email nebo heslo`
+- [ ] Neexistující email → zobrazí `Neplatný email nebo heslo`
+- [ ] Prázdná pole → button nefunguje (HTML required)
 
 ---
 
-## 4.3 Znovuodeslání a přijetí žádosti
-Pošli znovu žádost A → B a tentokrát ji přijmi.
+## Fáze 2 – Profil
 
-### Ověř:
-- request zmizí z pending,
-- přátelství se objeví v seznamu přátel na obou stranách,
-- notifikace se zaktualizuje,
-- přátelství je vidět i po refreshi,
-- websocket refreshne seznam bez nutnosti F5, pokud je to implementované.
+### 2.1 Úprava vlastního profilu
+V okně 1 (User A) — klikni na ⚙️:
 
----
+1. Změň **bio** na libovolný text
+2. Změň **avatar** — záložka Generovaný → klikni 🎲 několikrát
+3. Klikni **Uložit změny**
 
-# 5. Test seznamu přátel
+- [ ] Stránka se obnoví
+- [ ] Nový avatar a bio se zobrazují
+- [ ] Po F5 jsou změny zachovány
+- [ ] V okně 2 (User B) se po refreshi vidí změny u User A v přátelích (otestovat po přidání přátel)
 
-Po přijetí přátelství mezi A a B ověř:
-
-- oba uživatelé se vidí jako přátelé,
-- stav online/offline se synchronizuje,
-- kliknutí na přítele otevře správný profil nebo chat,
-- profil přítele zobrazuje tlačítko „Odebrat z přátel“ pouze u cizího uživatele,
-- žádný jiný uživatel se omylem nezobrazí v přátelích.
+### 2.2 Vlastní profilový modal
+- [ ] Kliknutí na vlastní avatar/jméno v headeru → profil se otevře
+- [ ] V profilu **není** tlačítko „Odebrat z přátel" (je to vlastní profil)
 
 ---
 
-# 6. Test odebrání z přátel
+## Fáze 3 – Systém přátel
 
-Toto je kritický test.
+### 3.1 Odeslání žádosti A → B
+V okně 1 (User A):
 
-## Scénář 1 – bez otevřeného chatu
-1. User A odebere user B z přátel.
+1. Klikni na 👤+ (Správce přátel)
+2. Záložka 🔍 Hledat → zadej `userB`
+3. Klikni **Poslat žádost**
 
-### Ověř:
-- přátelství zmizí na obou stranách,
-- po refreshi se nevrátí,
-- user B také okamžitě nebo po refreshi vidí, že už nejsou přátelé,
-- DM už nelze nově otevřít.
-
----
-
-## Scénář 2 – oba mají otevřený DM
-1. User A a user B si otevřou vzájemný DM.
-2. User A otevře profil user B.
-3. User A klikne na „Odebrat z přátel“.
-
-### Ověř:
-#### U user A:
-- chat se zavře okamžitě,
-- UI se vrátí do defaultního stavu,
-- nelze dále posílat zprávy,
-- nezůstane viset starý chat v hlavním panelu.
-
-#### U user B:
-- chat se zavře okamžitě bez F5,
-- UI se vrátí do defaultního stavu,
-- pokud se pokusí psát, nesmí to projít,
-- po kliknutí zpět na chat nesmí jít DM znovu otevřít.
-
-### Ověř navíc:
-- popupy / alerty nejsou přehnaně duplicitní,
-- pokud nějaký alert je, dává smysl a není jich několik za sebou.
+- [ ] Tlačítko se změní na `Odesláno ✔`
+- [ ] V okně 2 (User B) se v záložce 📩 Žádosti zobrazí žádost od userA
+- [ ] V User B sidebaru se zobrazí notifikační badge (pokud je implementovaný)
 
 ---
 
-# 7. Test přímých zpráv (DM)
+### 3.2 Odmítnutí žádosti
+V okně 2 (User B) → 📩 Žádosti:
 
-## 7.1 Otevření DM
-Jako user A otevři chat s user B.
+1. Klikni **✕ Odmítnout** u žádosti od User A
 
-### Ověř:
-- backend vrátí room / DM správně,
-- chat se zobrazí,
-- historie se načte,
-- refresh stránky nepoškodí stav,
-- při opakovaném otevření se nevytváří zbytečně nový DM room.
+- [ ] Žádost zmizí ze seznamu ihned
+- [ ] User A **není** v přátelích User B
+- [ ] Po F5 v obou oknech stav odpovídá realitě
 
 ---
 
-## 7.2 Posílání zpráv
-Pošli mezi A a B několik zpráv.
+### 3.3 Odeslání žádosti znovu a přijetí
+V okně 1 (User A) — pošli znovu žádost User B.
 
-### Ověř:
-- zpráva se uloží,
-- zpráva se objeví ihned na obou stranách,
-- websocket doručí update v reálném čase,
-- notifikace funguje, pokud druhý uživatel nemá aktivně otevřený ten samý chat,
-- pokud druhý uživatel chat otevřený má, systém se nechová jako nepřečtená notifikace navíc.
+V okně 2 (User B) → 📩 Žádosti:
 
----
+1. Klikni **✔ Přijmout**
 
-## 7.3 Editace a mazání zpráv
-Pokud aplikace umí upravit a smazat zprávy, otestuj:
-
-- edit vlastní zprávy,
-- smazání vlastní zprávy,
-- synchronizaci změny na druhé straně,
-- po refreshi zůstává správný stav,
-- cizí zprávu nelze editovat nebo mazat, pokud to role nesmí.
+- [ ] User B se zobrazí v sidebaru User A (v sekci přátel)
+- [ ] User A se zobrazí v sidebaru User B
+- [ ] Oba uživatelé vidí vzájemný online/offline status
+- [ ] Po F5 v obou oknech přátelství přetrvá
 
 ---
 
-# 8. Test skupin
+### 3.4 Přidání dalšího přátelství A → C a B → C
+Zopakuj kroky 3.1–3.3 pro:
+- A pošle žádost → C přijme
+- B pošle žádost → C přijme
 
-## 8.1 Vytvoření skupiny
-Jako user A vytvoř skupinu a přidej do ní B a C.
+Výsledný stav: **A-B přátelé, A-C přátelé, B-C přátelé**
 
-### Ověř:
-- skupina vznikne,
-- všichni členové ji vidí v seznamu,
-- název a avatar skupiny se zobrazují správně,
-- historie a členové skupiny se načtou,
-- websocket změnu doručí ostatním.
+- [ ] Každý vidí správné přátele v sidebaru
 
 ---
 
-## 8.2 Posílání zpráv ve skupině
-Ve skupině pošli několik zpráv od různých uživatelů.
+### 3.5 Zobrazení profilu přítele
+V okně 1 — klikni na avatar User B v sidebaru:
 
-### Ověř:
-- zprávy se zobrazují všem členům,
-- notifikace fungují správně,
-- člen mimo skupinu skupinu nevidí,
-- po refreshi je vše stále konzistentní.
+- [ ] Otevře se profilový modal User B
+- [ ] Zobrazuje username, avatar, bio, online status
+- [ ] **Je vidět** tlačítko „Odebrat z přátel"
 
 ---
 
-## 8.3 Přidání člena do skupiny
-Jako admin skupiny přidej user D.
+## Fáze 4 – DM Chat
 
-### Ověř:
-- nový člen skupinu uvidí,
-- může číst historii podle pravidel aplikace,
-- websocket doručí update,
-- ostatní členové vidí změnu členství.
+### 4.1 Otevření DM
+V okně 1 (User A) — klikni na User B v sidebaru:
 
----
-
-## 8.4 Opuštění skupiny
-Jako běžný člen skupiny skupinu opusť.
-
-### Ověř:
-- skupina zmizí ze seznamu,
-- nelze do ní dál psát,
-- nelze otevřít její historii,
-- po refreshi se nevrátí.
+- [ ] Otevře se chat okno s User B
+- [ ] Zobrazuje se username a online status v záhlaví
+- [ ] Historie je prázdná (nová konverzace)
 
 ---
 
-## 8.5 Vyhození člena ze skupiny
-Jako admin skupiny vyhoď user B.
+### 4.2 Posílání zpráv v reálném čase
+Pošli ze okna 1 (User A) zprávu: `Ahoj User B!`
 
-### Ověř:
-- user B dostane okamžité upozornění,
-- otevřený group chat se u user B zavře hned,
-- user B se vrátí na defaultní obrazovku,
-- user B už do skupiny nemůže psát,
-- po refreshi skupina už v seznamu není.
+- [ ] Zpráva se zobrazí v okně 1 okamžitě
+- [ ] Zpráva se zobrazí v okně 2 (User B) **bez obnovení stránky**
+- [ ] User B vidí notifikaci (pokud nemá chat otevřen)
 
----
+Nyní pošli odpověď z okna 2 (User B): `Čau User A!`
 
-# 9. Test notifikací
-
-## 9.1 Žádosti o přátelství
-Ověř:
-- notifikační tečka se rozsvítí po příchozí žádosti,
-- po přijetí nebo odmítnutí ihned zhasne,
-- po refreshi zůstává správný počet.
-
-## 9.2 Nové zprávy
-Ověř:
-- při příchozí zprávě do neaktivního chatu se objeví indikace nepřečtené zprávy,
-- po otevření chatu a označení jako přečtené tečka zmizí,
-- po refreshi není stav rozbitý.
-
-## 9.3 Hraniční scénáře
-- více žádostí najednou,
-- více nepřečtených chatů,
-- notifikace po logout/login,
-- notifikace po refreshi.
+- [ ] Obě strany vidí kompletní konverzaci
+- [ ] Zprávy mají správné časové razítko
 
 ---
 
-# 10. Test websocket synchronizace
+### 4.3 Editace zprávy
+V okně 1 (User A) — najeď na vlastní zprávu → klikni **⋮** → Upravit:
 
-Použij alespoň dva uživatele současně.
+1. Změň obsah zprávy
+2. Ulož
 
-## Ověř realtime scénáře:
-- změna online/offline stavu,
-- příchozí žádost o přátelství,
-- přijetí žádosti,
-- odmítnutí žádosti,
-- odebrání z přátel,
-- nová zpráva v DM,
-- nová zpráva ve skupině,
-- vyhození ze skupiny,
-- změna skupinového detailu,
-- změna profilu uživatele.
-
-### Sleduj:
-- zda změny přijdou druhému uživateli bez F5,
-- zda se po reconnectu websocketu aplikace nerozsype,
-- zda po logoutu socket opravdu skončí,
-- zda po dalším loginu socket znovu funguje.
+- [ ] Zpráva se aktualizuje v okně 1
+- [ ] Zpráva se aktualizuje v okně 2 **bez F5**
+- [ ] U zprávy se zobrazí `(upraveno)`
+- [ ] **Nelze** editovat zprávu User B (tlačítko upravit se nezobrazí)
 
 ---
 
-# 11. Test refreshů a persistence stavu
+### 4.4 Smazání zprávy
+V okně 1 (User A) — najeď na zprávu → klikni **⋮** → Smazat:
 
-U několika scénářů proveď refresh stránky:
-
-- po loginu,
-- při otevřeném DM,
-- při otevřené skupině,
-- po přijetí žádosti,
-- po odmítnutí žádosti,
-- po odebrání z přátel,
-- po změně profilu,
-- po vytvoření skupiny.
-
-### Ověř:
-- aplikace se po refreshi nezasekne,
-- token/session jsou stále validní,
-- zobrazená data odpovídají realitě,
-- websocket se znovu naváže,
-- UI není v rozporu s databází.
+- [ ] Zpráva se nahradí `🚫 Odstraněno` v okně 1
+- [ ] Stejné zobrazení v okně 2 **bez F5**
+- [ ] **Nelze** smazat zprávu User B
 
 ---
 
-# 12. Test logout a opětovného loginu
+### 4.5 Reply (citace)
+V okně 2 (User B) — najeď na zprávu User A → klikni **↩ Odpovědět**:
 
-Pro user A a B otestuj:
-
-1. login,
-2. otevření chatu,
-3. logout,
-4. login znovu.
-
-### Ověř:
-- socket se po logoutu uzavře,
-- po loginu se obnoví,
-- starý stav aplikace nezůstane viset,
-- nepřihlášený uživatel nevidí chráněná data.
+- [ ] Zobrazí se banner "Odpověď..." ve vstupním poli
+- [ ] Odeslaná zpráva obsahuje citaci původní zprávy
+- [ ] Citace se zobrazuje u User A v okně 1
 
 ---
 
-# 13. Negativní testy běžného uživatele
+### 4.6 Persistence při refreshi
+Proveď F5 v obou oknech:
 
-Vyzkoušej akce, které by neměly projít:
-
-- odeslat žádost sobě,
-- otevřít DM s uživatelem, který už není přítel,
-- ručně obnovit starý chat po odebrání z přátel,
-- poslat zprávu do skupiny, kde už nejsi člen,
-- otevřít historii skupiny, ze které jsi byl vyhozen,
-- otevřít profil s neexistujícím ID, pokud to UI dovolí,
-- dvojklikem / více kliky odeslat více stejných akcí za sebou.
-
-### Ověř:
-- backend vrací rozumnou chybu,
-- frontend se nerozsype,
-- uživatel neobejde logiku aplikace.
+- [ ] DM chat se znovu otevře správně
+- [ ] Historie zpráv je zachována
+- [ ] Smazané zprávy stále zobrazují `🚫 Odstraněno`
+- [ ] Upravené zprávy mají stále `(upraveno)`
 
 ---
 
-# 14. Test admin panelu
+## Fáze 5 – Skupinový chat
 
-Přihlas se jako admin.
+### 5.1 Vytvoření skupiny
+V okně 1 (User A) — klikni **+** v horní části sidebaru:
 
-## 14.1 Dashboard
-Ověř:
-- načtou se statistiky,
-- čísla dávají smysl,
-- panel se načítá bez chyb.
+1. Zadej název skupiny: `Testovací skupina`
+2. Zaškrtni **userB** a **userC**
+3. Klikni **Vytvořit**
 
-## 14.2 Uživatelé
-Ověř:
-- načtení seznamu uživatelů,
-- otevření detailu uživatele,
-- mazání uživatele,
-- po smazání se změna projeví v systému,
-- smazaný uživatel už se nepřihlásí,
-- pokud měl otevřený chat, druhé straně to nezboří UI.
-
-## 14.3 Místnosti / rooms
-Ověř:
-- seznam místností,
-- detail místnosti,
-- načtení historie místnosti,
-- smazání místnosti,
-- po smazání místnost zmizí z UI běžným uživatelům.
-
-## 14.4 Logy
-Ověř:
-- načtou se logy,
-- logy odpovídají akcím, které jsi provedl.
-
-## 14.5 Vytvoření admina
-Pokud máš funkci create-admin:
-- vytvoř nebo povyš testovací účet,
-- ověř, že nový admin může otevřít admin panel,
-- běžný uživatel se do admin části nedostane.
+- [ ] Skupina se zobrazí v sidebaru User A
+- [ ] Skupina se zobrazí v sidebaru User B (okno 2) bez F5
+- [ ] Skupina se zobrazí v sidebaru User C (okno 3) bez F5
 
 ---
 
-# 15. Test inicializačních skriptů a prostředí
+### 5.2 Skupinové zprávy
+Pošli zprávy ze všech tří oken:
 
-Pokud je to součást odevzdání, otestuj i setup projektu od nuly.
+- Okno 1 (A): `Zdravím skupinu!`
+- Okno 2 (B): `Ahoj od Béčka`
+- Okno 3 (C): `Čau od Céčka`
 
-## Ověř:
-- databáze se vytvoří korektně,
-- init skript proběhne bez chyb,
-- admin creation script funguje,
-- `.env` / `.env.example` odpovídá tomu, co backend potřebuje,
-- nová instalace jde zvednout bez ručního zásahu do kódu.
-
----
-
-# 16. Test výkonu a stability při běžném používání
-
-Nejde o benchmark, ale o praktický sanity check.
-
-## Vyzkoušej:
-- rychlé přepínání mezi více chaty,
-- více žádostí o přátelství za sebou,
-- více zpráv za sebou,
-- otevření více oken / tabů téhož uživatele,
-- odhlášení v jednom tabu a sledování chování v druhém.
-
-### Ověř:
-- UI se nesype,
-- websocket se nechová chaoticky,
-- nedochází k duplicitním akcím,
-- notifikace se nerozjíždí.
+- [ ] Všechny tři zprávy vidí všichni členové bez F5
+- [ ] U každé zprávy je zobrazen odesílatel (jméno + avatar)
+- [ ] Notifikace chodí pouze pokud uživatel nemá skupinu otevřenu
 
 ---
 
-# 17. Finální checklist „hotovo“
+### 5.3 Detail skupiny
+V okně 1 (User A) — klikni na název skupiny v záhlaví chatu:
 
-Aplikaci můžeš považovat za finálně ověřenou, pokud platí:
-
-- [ ] registrace funguje
-- [ ] login/logout funguje
-- [ ] vlastní profil neukazuje „Odebrat z přátel"
-- [ ] profil cizího uživatele tlačítko ukazuje správně
-- [ ] žádosti o přátelství fungují
-- [ ] přijetí žádosti funguje
-- [ ] odmítnutí žádosti funguje
-- [ ] notifikační tečka po rejectu zhasne ihned
-- [ ] přátelé se zobrazují korektně
-- [ ] DM jde otevřít jen tam, kde má
-- [ ] odebrání z přátel zavře DM na obou stranách bez F5
-- [ ] skupiny fungují
-- [ ] vyhození ze skupiny funguje okamžitě
-- [ ] websocket realtime synchronizace funguje
-- [ ] refresh stránky nerozbíjí stav
-- [ ] admin panel funguje
-- [ ] mazání uživatele / room funguje správně
-- [ ] aplikace nepadá do HTML/PHP error výstupů
-- [ ] ruční negativní scénáře neobcházejí pravidla systému
+- [ ] Otevře se GroupDetailsModal
+- [ ] Zobrazuje seznam 3 členů (A jako admin, B a C jako member)
+- [ ] User A vidí tlačítko **✎ Upravit**
 
 ---
 
-# 18. Doporučený praktický testovací plán na jeden průchod
+### 5.4 Úprava skupiny
+V detailu skupiny (User A):
 
-Jestli chceš celý systém projet efektivně v jednom sledu, udělej to takto:
+1. Klikni **✎ Upravit**
+2. Změň název na `Přejmenovaná skupina`
+3. Ulož
 
-1. vytvoř 4 běžné účty + 1 admin účet,
-2. přihlas všechny,
-3. uprav profil user A,
-4. pošli žádost A → B,
-5. B odmítne,
-6. ověř zhasnutí notifikace,
-7. A pošle žádost znovu,
-8. B přijme,
-9. otevři DM A ↔ B,
-10. pošli zprávy oběma směry,
-11. vytvoř skupinu A + B + C,
-12. pošli zprávy do skupiny,
-13. vyhoď B ze skupiny,
-14. ověř okamžité zavření group chatu,
-15. znovu otevři DM A ↔ B,
-16. A odebere B z přátel,
-17. ověř okamžité zavření DM na obou stranách,
-18. jako admin smaž testovacího user C,
-19. jako admin projdi rooms, logs, detail uživatele,
-20. proveď refresh všech aktivních oken,
-21. logout/login znovu,
-22. ověř, že nic nezůstalo v rozbitém stavu.
+- [ ] Nový název se zobrazí v detailu
+- [ ] Název se aktualizuje v sidebaru User B a User C (bez F5)
 
 ---
 
-# 19. Poznámky k testování
+### 5.5 Přidání člena
+V detailu skupiny (User A) — klikni **+ Přidat další lidi**:
 
-Doporučení:
-- zapisuj si chyby průběžně,
-- používej více oken najednou,
-- sleduj browser console i backend logy,
-- po kritických scénářích udělej refresh,
-- u websocket scénářů testuj vždy oba uživatele současně.
+- Pokud máš User D přidaného jako přítele, přidej ho do skupiny
 
+- [ ] User D vidí skupinu v sidebaru
+- [ ] Ostatní členové vidí nového člena v detailu skupiny
+- [ ] User D může posílat zprávy
+
+---
+
+### 5.6 Vyhození člena (kick)
+V detailu skupiny (User A) — klikni **Vyhodit** u User B:
+
+Sleduj **okno 2 (User B)**:
+
+- [ ] User B dostane okamžité upozornění `Byli jste odebráni ze skupiny`
+- [ ] Group chat se User B **okamžitě zavře** bez F5
+- [ ] User B se vrátí na výchozí stav sidebaru
+- [ ] Skupina zmizí ze sidebaru User B
+- [ ] User B nemůže skupině psát ani po ručním refreshi
+
+V okně 1 (User A):
+- [ ] User B zmizí ze seznamu členů v detailu skupiny
+- [ ] Konverzace pokračuje normálně pro A a C
+
+---
+
+### 5.7 Opuštění skupiny
+V okně 3 (User C) — otevři detail skupiny → klikni **Opustit skupinu**:
+
+- [ ] Skupina zmizí ze sidebaru User C
+- [ ] User C nemůže do skupiny psát
+- [ ] Po F5 se skupina nevrátí
+- [ ] Zbývající členové vidí, že User C odešel
+
+---
+
+## Fáze 6 – Odebrání z přátel
+
+### 6.1 Odebrání bez otevřeného chatu
+V okně 1 (User A) — klikni na avatar User B → modal → **Odebrat z přátel**:
+
+- [ ] User B zmizí ze sidebaru User A
+- [ ] User A zmizí ze sidebaru User B (bez F5)
+- [ ] Nelze otevřít DM — žádné tlačítko ani přístup
+
+---
+
+### 6.2 Odebrání s otevřeným DM na obou stranách
+
+Nejdřív přidej A a B zpět jako přátele (Fáze 3.1–3.3), pak:
+
+1. Okno 1 (A): otevři DM s User B
+2. Okno 2 (B): otevři DM s User A
+3. V okně 1 (A): klikni na avatar User B v záhlaví chatu → modal → **Odebrat z přátel**
+
+**Sleduj User A (okno 1):**
+- [ ] DM chat se ihned zavře
+- [ ] Sidebar se vrátí do výchozího stavu
+- [ ] Nelze odeslat zprávu
+
+**Sleduj User B (okno 2):**
+- [ ] DM chat se zavře **bez F5**
+- [ ] Sidebar se vrátí do výchozího stavu
+- [ ] Zobrazí se notifikace nebo toast o odebrání
+
+---
+
+## Fáze 7 – Notifikace a presence
+
+### 7.1 Presence tracking — oba aktivní v chatu
+A a B si znovu přidají přátelství a otevřou DM. Oba mají chat otevřen.
+
+Okno 1 (A) pošle zprávu:
+
+- [ ] Zpráva se zobrazí User B ihned
+- [ ] **Žádná** červená notifikační tečka se u User B neobjeví (má chat otevřen)
+
+---
+
+### 7.2 Presence tracking — příjemce v jiném chatu
+User B přepne na jiný chat (nebo sidebar). User A pošle zprávu.
+
+- [ ] User B vidí **notifikační tečku** u konverzace s User A
+- [ ] Po přepnutí zpět na DM s A tečka zmizí
+- [ ] Po F5 tečka nezmizí (dokud se chat neotevře)
+
+---
+
+### 7.3 Offline notifikace
+User B se odhlásí. User A pošle zprávu.
+User B se znovu přihlásí.
+
+- [ ] User B vidí notifikační tečku v sidebaru u User A
+- [ ] Po otevření chatu tečka zmizí
+
+---
+
+## Fáze 8 – Admin panel
+
+### 8.1 Dashboard
+V okně 4 (Admin):
+
+- [ ] Načtou se statistiky (počty uživatelů, online, místností, zpráv)
+- [ ] Čísla odpovídají reálnému stavu (min. 3 uživatelé, min. 1 místnost)
+- [ ] Zobrazují se poslední audit logy s akcemi (LOGIN, REGISTER, ...)
+
+---
+
+### 8.2 Záložka Uživatelé
+- [ ] Seznam zobrazuje všechny registrované uživatele
+- [ ] Každý uživatel má username, email, roli a status
+- [ ] Kliknutí na detail zobrazuje audit logy uživatele
+
+---
+
+### 8.3 Smazání uživatele adminem
+V záložce Uživatelé — smaž **User C**:
+
+- [ ] User C zmizí ze seznamu
+- [ ] Pokud byl User C přihlášen → session se zneplatní (po F5 v okně 3 → login stránka)
+- [ ] Zprávy User C zůstanou v chatech jako `Smazaný uživatel`
+- [ ] Admin **nemůže** smazat sebe (tlačítko pro vlastní účet nefunguje nebo chybí)
+- [ ] Admin **nemůže** smazat posledního admina
+
+---
+
+### 8.4 Záložka Místnosti
+- [ ] Zobrazují se všechny místnosti (DM i skupiny)
+- [ ] Detail místnosti zobrazuje členy
+- [ ] Historie místnosti zobrazuje zprávy
+- [ ] Smazání místnosti ji odstraní z UI všech uživatelů
+
+---
+
+### 8.5 Záložka Logy
+- [ ] Zobrazují se logy akcí (LOGIN, LOGOUT, UPDATE_PROFILE, DELETE_USER, ...)
+- [ ] Logy odpovídají akcím provedeným během testování
+
+---
+
+## Fáze 9 – Hraniční a negativní testy
+
+### 9.1 Nelze odeslat žádost sobě
+V okně 1 — pokud rozhraní dovolí, zkus přidat vlastní username:
+
+- [ ] Backend vrátí chybu `Nemůžeš přidat sám sebe`
+
+---
+
+### 9.2 Nelze otevřít DM s ne-přítelem
+Ručně zavolej (nebo ověř chování v UI): otevření DM s uživatelem, který není přítel:
+
+- [ ] Backend vrátí `403 chat_open_forbidden`
+- [ ] UI zobrazí chybu nebo redirect
+
+---
+
+### 9.3 Nelze posílat zprávy po odebrání přítele
+Po odebrání z přátel (Fáze 6) se pokus odeslat zprávu:
+
+- [ ] Backend vrátí `403 message_send_forbidden`
+- [ ] UI zobrazí toast nebo uzavře chat
+
+---
+
+### 9.4 Nelze posílat zprávy po vyhazení ze skupiny
+Po kicku (Fáze 5.6) v okně User B se pokus odeslat zprávu do skupiny:
+
+- [ ] Backend vrátí `403`
+- [ ] Chat je již zavřen
+
+---
+
+### 9.5 Duplicitní žádost o přátelství
+V okně 1 — pokud tlačítko zobrazuje `Odesláno ✔`, klikni znovu nebo zavolej endpoint ručně:
+
+- [ ] Backend vrátí `400 friend_request_failed`
+- [ ] Žádost se nevytvoří podruhé
+
+---
+
+### 9.6 Více záložek stejného uživatele
+Otevři dvě záložky se stejným přihlášeným User A.
+V záložce 1 pošli zprávu:
+
+- [ ] Zpráva se zobrazí v záložce 2 bez F5
+- [ ] Online status se nemění při zavření jedné záložky
+
+---
+
+## Fáze 10 – Závěrečný průchod
+
+### 10.1 Logout / Login cyklus
+Proveď logout a nový login u User A a User B:
+
+- [ ] Po logoutu nelze přistoupit k chráněným endpointům (vrátí 401)
+- [ ] Po novém loginu funguje vše jako dříve
+- [ ] WebSocket se po loginu znovu naváže
+
+---
+
+### 10.2 Refresh u všech otevřených oken
+Proveď F5 ve všech otevřených oknech:
+
+- [ ] Žádné okno se nezasekne nebo nevyhodí HTML/PHP chybu
+- [ ] Každý uživatel zůstane přihlášen
+- [ ] WebSocket se znovu připojí
+- [ ] Data odpovídají aktuálnímu stavu databáze
+
+---
+
+## Finální checklist
+
+| Oblast | Funkce | Otestováno |
+|--------|--------|-----------|
+| Auth | Registrace s validními daty | ☐ |
+| Auth | Registrace — validační chyby (6 scénářů) | ☐ |
+| Auth | Login / Logout | ☐ |
+| Auth | Persistence po F5 | ☐ |
+| Profil | Úprava bio + avatar | ☐ |
+| Profil | Vlastní profil bez tlačítka odebrat | ☐ |
+| Přátelé | Odeslání žádosti | ☐ |
+| Přátelé | Odmítnutí žádosti | ☐ |
+| Přátelé | Přijetí žádosti | ☐ |
+| Přátelé | Odebrání (bez otevřeného chatu) | ☐ |
+| Přátelé | Odebrání (DM otevřen na obou stranách) | ☐ |
+| DM Chat | Otevření konverzace | ☐ |
+| DM Chat | Real-time doručení zpráv | ☐ |
+| DM Chat | Editace vlastní zprávy | ☐ |
+| DM Chat | Smazání vlastní zprávy (soft delete) | ☐ |
+| DM Chat | Reply / citace | ☐ |
+| Skupiny | Vytvoření skupiny | ☐ |
+| Skupiny | Skupinové zprávy real-time | ☐ |
+| Skupiny | Úprava názvu skupiny | ☐ |
+| Skupiny | Kick člena (okamžité zavření u vyhazovaného) | ☐ |
+| Skupiny | Opuštění skupiny | ☐ |
+| Notifikace | Presence tracking (aktivní/neaktivní místnost) | ☐ |
+| Notifikace | Offline notifikace (odhlášen, přihlásí se zpět) | ☐ |
+| Admin | Dashboard statistiky | ☐ |
+| Admin | Seznam uživatelů | ☐ |
+| Admin | Smazání uživatele | ☐ |
+| Admin | Ochrana posledního admina | ☐ |
+| Admin | Seznam a detail místností | ☐ |
+| Admin | Audit logy | ☐ |
+| Edge cases | Žádost sama sobě → zamítnuta | ☐ |
+| Edge cases | DM s ne-přítelem → zamítnut | ☐ |
+| Edge cases | Více záložek stejného uživatele | ☐ |
+| Edge cases | F5 ve všech stavech nezpůsobí pád | ☐ |
+
+---
+
+*Testovací plán — Whisp | Bruno Vašíček | I4C | 2025/2026*

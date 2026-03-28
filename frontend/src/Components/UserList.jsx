@@ -11,7 +11,6 @@ const UserList = ({ onSelectUser, unreadIds = [], socket }) => {
 
     const fetchData = async () => {
         try {
-            // Načteme přátele a místnosti (rooms obsahuje i DM i Groups)
             const [friendsRes, roomsRes] = await Promise.all([
                 api.get('/friends').catch(() => ({ data: [] })),
                 api.get('/rooms').catch(() => ({ data: [] }))
@@ -20,29 +19,22 @@ const UserList = ({ onSelectUser, unreadIds = [], socket }) => {
             const friends = Array.isArray(friendsRes.data) ? friendsRes.data : [];
             const rooms = Array.isArray(roomsRes.data) ? roomsRes.data : [];
 
-            // Rozdělení rooms na skupiny a DMs
             const groups = rooms.filter(r => r.type === 'group');
             const dms = rooms.filter(r => r.type !== 'group');
 
-            // Spojení Přátel s jejich DM historií
             const mergedFriends = friends.map(friend => {
-                // Najdeme, jestli už máme otevřený chat s tímto přítelem
                 const dmInfo = dms.find(r => r.name === friend.username) || {};
 
                 return {
                     ...friend,
                     type: 'dm',
-                    // Data z místnosti mají přednost (poslední zpráva, počet nepřečtených)
                     last_message: dmInfo.last_message || null,
                     unread_count: dmInfo.unread_count || 0,
                     room_id: dmInfo.id || null
                 };
             });
 
-            // Spojíme skupiny a přátele do jednoho seznamu
             const combined = [...groups, ...mergedFriends].sort((a, b) => {
-                // Řazení: primárně podle nepřečtených, pak podle času?
-                // Zde jednoduché řazení, aby nepřečtené byly nahoře
                 return (b.unread_count || 0) - (a.unread_count || 0);
             });
 
@@ -53,7 +45,6 @@ const UserList = ({ onSelectUser, unreadIds = [], socket }) => {
     useEffect(() => {
         fetchData();
 
-        // Listener pro změnu statusu (online/offline)
         const handleStatusChange = (event) => {
             const data = event.detail;
             if (data.refresh) { fetchData(); return; }
@@ -104,7 +95,6 @@ const UserList = ({ onSelectUser, unreadIds = [], socket }) => {
                         }
                         const avatar = item.avatar_url || (isGroup ? `https://api.dicebear.com/7.x/initials/svg?seed=${name}` : `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`);
 
-                        // Zkontrolujeme nepřečtené (buď z API nebo z živého Socketu v App.jsx)
                         const hasUnread = (item.unread_count > 0) || (unreadIds.includes(item.id) || unreadIds.includes(item.room_id));
 
                         return (

@@ -24,7 +24,6 @@ class Database {
 
         } catch(PDOException $exception) {
             error_log("Connection error: " . $exception->getMessage());
-            echo "Chyba připojení k DB. Zkontrolujte logy.";
             exit();
         }
 

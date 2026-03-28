@@ -8,7 +8,6 @@ const CreateGroupModal = ({ onClose, onGroupCreated, socket }) => {
     const [selectedFriends, setSelectedFriends] = useState([]);
     const [error, setError] = useState('');
 
-    // Načteme seznam přátel
     useEffect(() => {
         const loadFriends = async () => {
             try {
@@ -32,16 +31,14 @@ const CreateGroupModal = ({ onClose, onGroupCreated, socket }) => {
     const handleCreate = async () => {
         setError('');
 
-        // 1. Validace názvu
         if (!groupName.trim()) return setError("Zadejte název skupiny.");
 
-        // 2. Validace počtu členů (Pravidlo: Zakladatel + 2 přátelé = min 3 lidi)
         if (selectedFriends.length < 2) {
             return setError("Skupina musí mít alespoň 3 členy (vy + minimálně 2 přátelé).");
         }
 
         try {
-            const res = await api.post('/groups/create', { // Ulož si odpověď do 'res'
+            const res = await api.post('/groups/create', {
                 name: groupName,
                 members: selectedFriends
             });
